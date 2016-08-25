@@ -1,0 +1,16 @@
+---
+- hosts: localhost
+
+  tasks:
+  - name: Add Openshift Containers Provider to ManageIQ
+    manageiq:
+      name: '{{ name }}'
+      url: '{{ url }}'
+      username: '{{ username }}'
+      password: '{{ password }}'
+      hostname: '{{ hostname }}'
+      port: '{{ port }}'
+      token: '{{ token }}'
+    register: result
+
+  - debug: var=result
