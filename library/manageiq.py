@@ -64,6 +64,16 @@ EXAMPLES = '''
 '''
 
 
+def update_required(client, module, providers_url, provider_id, hostname, port):
+    try:
+        result = client.get(providers_url + '/%d/?attributes=authentications,endpoints' % provider_id)
+        endpoint = result['endpoints'][0]
+        return False if (endpoint['hostname'] == hostname and endpoint['port'] == int(port)) else True
+    except Exception as e:
+        msg = "Failed to get provider data. Error: %s" % e
+        module.fail_json(msg=msg)
+
+
 def main():
     module = AnsibleModule(
         argument_spec=dict(
@@ -99,17 +109,21 @@ def main():
     for provider in providers:
         if provider.name == provider_name:
             provider_id = provider.id
-    if provider_id:
-        # provider exists, updates provider with new parameters
-        try:
-            result = client.post(providers_url + '/' + str(provider_id),
-                                 action='edit',
-                                 connection_configurations=endpoints)
-            msg = "Successfuly updated %s provider" % provider_name
-            changed = True
-        except Exception as e:
-            msg = "Failed to add provider. Error: %s" % e
-            module.fail_json(msg=msg)
+    if provider_id: #provider exists
+        if update_required(client, module, providers_url, provider_id, hostname, port):
+            # updates provider with new parameters
+            try:
+                result = client.post(providers_url + '/%d' % provider_id,
+                                     action='edit',
+                                     connection_configurations=endpoints)
+                msg = "Successfuly updated %s provider" % provider_name
+                changed = True
+            except Exception as e:
+                msg = "Failed to add provider. Error: %s" % e
+                module.fail_json(msg=msg)
+        else:
+            msg = "Provider %s already exists" % provider_name
+            changed = False
     # provider doesn't exists, adding it to manageiq
     else:
         try:
