@@ -89,7 +89,7 @@ def main():
 
     endpoints = [{'endpoint': {'role': 'default', 'hostname': hostname,
                                'port': port},
-                  'authentication': {'role': 'Bearer',
+                  'authentication': {'role': 'bearer',
                                      'auth_key': token}}]
 
     client = MiqApi(url, (username, password))
