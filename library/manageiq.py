@@ -4,9 +4,6 @@ from ansible.module_utils.basic import *
 from miqclient.api import API as MiqApi
 
 
-PROVIDER_TYPE = 'ManageIQ::Providers::OpenshiftEnterprise::ContainerManager'
-PROVIDER_SUFFIX = '/providers'
-
 DOCUMENTATION = '''
 ---
 module: manageiq
@@ -64,14 +61,104 @@ EXAMPLES = '''
 '''
 
 
-def update_required(client, module, providers_url, provider_id, hostname, port):
-    try:
-        result = client.get(providers_url + '/%d/?attributes=authentications,endpoints' % provider_id)
+class ManageIQ(object):
+    """ ManageIQ object to execute various operations in manageiq
+
+    url      - manageiq environment url
+    user     - the username in manageiq
+    password - the user password in manageiq
+    """
+    openshift_provider_type = 'ManageIQ::Providers::OpenshiftEnterprise::ContainerManager'
+
+    def __init__(self, module, url, user, password):
+        self.module        = module
+        self.api_url       = url + '/api'
+        self.user          = user
+        self.password      = password
+        self.client        = MiqApi(self.api_url, (self.user, self.password))
+        self.changed       = False
+        self.providers_url = self.api_url + '/providers'
+
+    def update_required(self, provider_id, hostname, port):
+        """ Checks whether an update is required for the provider
+
+        Returns:
+            False if the hostname and port passed equals the provider's,
+            True otherwise
+        """
+        try:
+            result = self.client.get(self.providers_url + '/%d/?attributes=authentications,endpoints' % provider_id)
+        except Exception as e:
+            self.module.fail_json(msg="Failed to get provider data. Error: %s" % e)
         endpoint = result['endpoints'][0]
         return False if (endpoint['hostname'] == hostname and endpoint['port'] == int(port)) else True
-    except Exception as e:
-        msg = "Failed to get provider data. Error: %s" % e
-        module.fail_json(msg=msg)
+
+    def update_provider(self, provider_id, provider_name, endpoints):
+        """ Updates the existing provider with new parameters
+        """
+        try:
+            result = self.client.post(self.providers_url + '/%d' % provider_id,
+                                      action='edit',
+                                      connection_configurations=endpoints)
+            self.changed = True
+        except Exception as e:
+            self.module.fail_json(msg="Failed to update provider. Error: %s" % e)
+
+    def add_new_provider(self, provider_name, endpoints):
+        """ Adds a provider to manageiq
+
+        Returns:
+            the added provider id
+        """
+        try:
+            result = self.client.post(self.providers_url, type=ManageIQ.openshift_provider_type,
+                                      name=provider_name,
+                                      connection_configurations=endpoints)
+            provider_id = result['results'][0]['id']
+            self.changed = True
+        except Exception as e:
+            self.module.fail_json(msg="Failed to add provider. Error: %s" % e)
+        return provider_id
+
+    def find_provider_by_name(self, provider_name):
+        """ Searches the provider name in manageiq existing providers
+
+        Returns:
+            the provider id if it exists in manageiq, None otherwise
+        """
+        providers = self.client.collections.providers
+        return next((p.id for p in providers if p.name == provider_name), None)
+
+    def add_or_update_provider(self, provider_name, hostname, port, token):
+        """ Adds an OpenShift containers provider to manageiq or update it's
+        attributes in case a provider with the same name already exists
+
+        Returns:
+            the added or updated provider id, whether or not a change took place
+            and a short message describing the operation executed
+        """
+        endpoints = [{'endpoint': {'role': 'default', 'hostname': hostname,
+                                   'port': port},
+                     'authentication': {'role': 'bearer',
+                                        'auth_key': token}}]
+        message = ""
+
+        # check if provider with the same name already exists
+        provider_id = self.find_provider_by_name(provider_name)
+        if provider_id:  # provider exists
+            if self.update_required(provider_id, hostname, port):
+                self.update_provider(provider_id, provider_name, endpoints)
+                message = "Successfuly updated %s provider" % provider_name
+            else:
+                message = "Provider %s already exists" % provider_name
+        else:  # provider doesn't exists, adding it to manageiq
+            provider_id = self.add_new_provider(provider_name, endpoints)
+            message = "Successfuly added %s provider" % provider_name
+
+        res_args = dict(
+            provider_id=provider_id, changed=self.changed, msg=message
+        )
+        return res_args
 
 
 def main():
@@ -80,66 +167,24 @@ def main():
             name=dict(required=True),
             url=dict(required=True),
             username=dict(required=True),
-            password=dict(required=True),
+            password=dict(required=True, no_log=True),
             port=dict(required=True),
             hostname=dict(required=True),
-            token=dict(required=True)
+            token=dict(required=True, no_log=True)
         )
     )
 
-    params = module.params
-    url = params['url'] + '/api'
-    providers_url = url + '/providers'
-    username = params['username']
-    password = params['password']
-    provider_name = params['name']
-    port = params['port']
-    hostname = params['hostname']
-    token = params['token']
+    url           = module.params['url']
+    username      = module.params['username']
+    password      = module.params['password']
+    provider_name = module.params['name']
+    hostname      = module.params['hostname']
+    port          = module.params['port']
+    token         = module.params['token']
 
-    endpoints = [{'endpoint': {'role': 'default', 'hostname': hostname,
-                               'port': port},
-                  'authentication': {'role': 'bearer',
-                                     'auth_key': token}}]
+    manageiq = ManageIQ(module, url, username, password)
 
-    client = MiqApi(url, (username, password))
-    providers = client.collections.providers
-    # check if provider with the same name already exists
-    provider_id = None
-    for provider in providers:
-        if provider.name == provider_name:
-            provider_id = provider.id
-    if provider_id: #provider exists
-        if update_required(client, module, providers_url, provider_id, hostname, port):
-            # updates provider with new parameters
-            try:
-                result = client.post(providers_url + '/%d' % provider_id,
-                                     action='edit',
-                                     connection_configurations=endpoints)
-                msg = "Successfuly updated %s provider" % provider_name
-                changed = True
-            except Exception as e:
-                msg = "Failed to add provider. Error: %s" % e
-                module.fail_json(msg=msg)
-        else:
-            msg = "Provider %s already exists" % provider_name
-            changed = False
-    # provider doesn't exists, adding it to manageiq
-    else:
-        try:
-            result = client.post(providers_url, type=PROVIDER_TYPE,
-                                 name=provider_name,
-                                 connection_configurations=endpoints)
-            provider_id = result['results'][0]['id']
-            msg = "Successfuly added %s provider" % provider_name
-            changed = True
-        except Exception as e:
-            msg = "Failed to add provider. Error: %s" % e
-            module.fail_json(msg=msg)
-
-    res_args = dict(
-        provider_id=provider_id, changed=changed, msg=msg
-    )
+    res_args = manageiq.add_or_update_provider(provider_name, hostname, port, token)
     module.exit_json(**res_args)
 
 
