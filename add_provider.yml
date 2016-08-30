@@ -5,6 +5,7 @@
   - name: Add Openshift Containers Provider to ManageIQ
     manageiq:
       name: '{{ name }}'
+      type: '{{ type }}'
       url: '{{ url }}'
       username: '{{ username }}'
       password: '{{ password }}'
