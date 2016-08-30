@@ -97,9 +97,9 @@ class ManageIQ(object):
         """ Updates the existing provider with new parameters
         """
         try:
-            result = self.client.post(self.providers_url + '/%d' % provider_id,
-                                      action='edit',
-                                      connection_configurations=endpoints)
+            self.client.post(self.providers_url + '/%d' % provider_id,
+                             action='edit',
+                             connection_configurations=endpoints)
             self.changed = True
         except Exception as e:
             self.module.fail_json(msg="Failed to update provider. Error: %s" % e)
