@@ -113,7 +113,7 @@ class ManageIQ(object):
             True otherwise
         """
         try:
-            result = self.client.get(self.providers_url + '/%d/?attributes=authentications,endpoints' % provider_id)
+            result = self.client.get('{providers_url}/{id}/?attributes=authentications,endpoints'.format(providers_url=self.providers_url, id=provider_id))
         except Exception as e:
             self.module.fail_json(msg="Failed to get provider data. Error: %s" % e)
 
@@ -127,7 +127,7 @@ class ManageIQ(object):
         """ Updates the existing provider with new parameters
         """
         try:
-            self.client.post(self.providers_url + '/%d' % provider_id,
+            self.client.post('{api_url}/providers/{id}'.format(api_url=self.api_url, id=provider_id),
                              action='edit',
                              connection_configurations=endpoints)
             self.changed = True
