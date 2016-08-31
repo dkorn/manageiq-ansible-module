@@ -13,37 +13,42 @@ author: Daniel Korn (dkorn)
 options:
   url:
     description:
-      - 'the manageiq environment url'
+      - the manageiq environment url
     required: true
     default: []
   username:
     description:
-      - 'manageiq username'
+      - manageiq username
     required: true
     default: []
   password:
     description:
-      - 'manageiq password'
+      - manageiq password
     required: true
     default: []
   name:
     description:
-      - 'the added provider name in manageiq'
+      - the added provider name in manageiq
     required: true
     default: []
+  type:
+    description:
+      - the openshift provider type
+    required: true
+    choices: ['openshift-origin', 'openshift-enterprise']
   hostname:
     description:
-      - 'the added provider hostname'
+      - the added provider hostname
     required: true
     default: []
   port:
     description:
-      - 'the port used by the added provider'
+      - the port used by the added provider
     required: true
     default: []
   token:
     description:
-      - 'the added provider token'
+      - the added provider token
     required: true
     default: []
 '''
@@ -52,6 +57,7 @@ EXAMPLES = '''
 # Add Openshift Containers Provider to ManageIQ
   manageiq:
     name: 'Molecule'
+    type: 'openshift-enterprise'
     url: 'http://localhost:3000'
     username: 'admin'
     password: '******'
@@ -68,7 +74,8 @@ class ManageIQ(object):
     user     - the username in manageiq
     password - the user password in manageiq
     """
-    openshift_provider_type = 'ManageIQ::Providers::OpenshiftEnterprise::ContainerManager'
+    openshift_provider_types = {'openshift-origin': 'ManageIQ::Providers::Openshift::ContainerManager',
+                                'openshift-enterprise': 'ManageIQ::Providers::OpenshiftEnterprise::ContainerManager'}
 
     def __init__(self, module, url, user, password):
         self.module        = module
@@ -104,15 +111,15 @@ class ManageIQ(object):
         except Exception as e:
             self.module.fail_json(msg="Failed to update provider. Error: %s" % e)
 
-    def add_new_provider(self, provider_name, endpoints):
+    def add_new_provider(self, provider_name, provider_type, endpoints):
         """ Adds a provider to manageiq
 
         Returns:
             the added provider id
         """
         try:
-            result = self.client.post(self.providers_url, type=ManageIQ.openshift_provider_type,
-                                      name=provider_name,
+            result = self.client.post(self.providers_url, name=provider_name,
+                                      type=ManageIQ.openshift_provider_types[provider_type],
                                       connection_configurations=endpoints)
             provider_id = result['results'][0]['id']
             self.changed = True
@@ -129,7 +136,7 @@ class ManageIQ(object):
         providers = self.client.collections.providers
         return next((p.id for p in providers if p.name == provider_name), None)
 
-    def add_or_update_provider(self, provider_name, hostname, port, token):
+    def add_or_update_provider(self, provider_name, provider_type, hostname, port, token):
         """ Adds an OpenShift containers provider to manageiq or update it's
         attributes in case a provider with the same name already exists
 
@@ -152,7 +159,7 @@ class ManageIQ(object):
             else:
                 message = "Provider %s already exists" % provider_name
         else:  # provider doesn't exists, adding it to manageiq
-            provider_id = self.add_new_provider(provider_name, endpoints)
+            provider_id = self.add_new_provider(provider_name, provider_type, endpoints)
             message = "Successfuly added %s provider" % provider_name
 
         res_args = dict(
@@ -165,6 +172,8 @@ def main():
     module = AnsibleModule(
         argument_spec=dict(
             name=dict(required=True),
+            type=dict(required=True,
+                      choices=['origin', 'enterprise']),
             url=dict(required=True),
             username=dict(required=True),
             password=dict(required=True, no_log=True),
@@ -178,13 +187,14 @@ def main():
     username      = module.params['username']
     password      = module.params['password']
     provider_name = module.params['name']
+    provider_type = module.params['type']
     hostname      = module.params['hostname']
     port          = module.params['port']
     token         = module.params['token']
 
     manageiq = ManageIQ(module, url, username, password)
 
-    res_args = manageiq.add_or_update_provider(provider_name, hostname, port, token)
+    res_args = manageiq.add_or_update_provider(provider_name, provider_type, hostname, port, token)
     module.exit_json(**res_args)
 
 
