@@ -173,7 +173,7 @@ def main():
         argument_spec=dict(
             name=dict(required=True),
             type=dict(required=True,
-                      choices=['origin', 'enterprise']),
+                      choices=['openshift-origin', 'openshift-enterprise']),
             url=dict(required=True),
             username=dict(required=True),
             password=dict(required=True, no_log=True),
