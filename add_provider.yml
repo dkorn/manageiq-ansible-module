@@ -12,6 +12,9 @@
       hostname: '{{ hostname }}'
       port: '{{ port }}'
       token: '{{ token }}'
+      metrics: '{{ metrics | default(omit) }}'
+      hawkular_hostname: '{{ hawkular_hostname | default(omit) }}'
+      hawkular_port: '{{ hawkular_port | default(omit) }}'
     register: result
 
   - debug: var=result
