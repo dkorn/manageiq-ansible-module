@@ -6,9 +6,9 @@
     manageiq:
       name: '{{ name }}'
       type: '{{ type }}'
-      url: '{{ url }}'
-      username: '{{ username }}'
-      password: '{{ password }}'
+      url: '{{ url | default(omit) }}'
+      username: '{{ username | default(omit) }}'
+      password: '{{ password | default(omit) }}'
       hostname: '{{ hostname }}'
       port: '{{ port }}'
       token: '{{ token }}'
