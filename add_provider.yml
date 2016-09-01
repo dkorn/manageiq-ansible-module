@@ -9,6 +9,7 @@
       url: '{{ url | default(omit) }}'
       username: '{{ username | default(omit) }}'
       password: '{{ password | default(omit) }}'
+      state: '{{ state }}'
       hostname: '{{ hostname }}'
       port: '{{ port }}'
       token: '{{ token }}'

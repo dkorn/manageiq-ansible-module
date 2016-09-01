@@ -34,6 +34,15 @@ options:
       - the openshift provider type
     required: true
     choices: ['openshift-origin', 'openshift-enterprise']
+  state:
+    description:
+      - the state of the provider
+      - On present, it will add the provider if it does not exist or update the
+      provider if the associated data is different
+      - On absent, it will delete the provider if it exists
+    required: false
+    choices: ['present', 'absent']
+    default: 'present'
   hostname:
     description:
       - the added provider hostname
@@ -72,6 +81,7 @@ EXAMPLES = '''
   manageiq:
     name: 'Molecule'
     type: 'openshift-enterprise'
+    state: 'present'
     url: 'http://localhost:3000'
     username: 'admin'
     password: '******'
@@ -165,13 +175,36 @@ class ManageIQ(object):
                              'port': port},
                 'authentication': {'role': authtype, 'auth_key': token}}
 
+    def delete_provider(self, provider_name):
+        """ Deletes the provider
+
+        Returns:
+            the delete task id if a task was generated, whether or not
+            a change took place and a short message describing the operation
+            executed.
+        """
+        provider_id = self.find_provider_by_name(provider_name)
+        if provider_id:
+            try:
+                url = '{providers_url}/{id}'.format(providers_url=self.providers_url, id=provider_id)
+                result = self.client.post(url, action='delete')
+                if result['success']:
+                    self.changed = True
+                    return dict(task_id=result['task_id'], changed=self.changed, msg=result['message'])
+                else:
+                    return dict(task_id=None, changed=self.changed, api_error=result, msg="Failed to delete {provider_name} provider".format(provider_name=provider_name))
+            except Exception as e:
+                self.module.fail_json(msg="Failed to delete {provider_name} provider. Error: {error}".format(provider_name=provider_name, error=e))
+        else:
+            return dict(task_id=None, changed=self.changed, msg="Provider {provider_name} doesn't exist".format(provider_name=provider_name))
+
     def add_or_update_provider(self, provider_name, provider_type, endpoints):
         """ Adds an OpenShift containers provider to manageiq or update it's
         attributes in case a provider with the same name already exists
 
         Returns:
-            the added or updated provider id, whether or not a change took place
-            and a short message describing the operation executed
+            the added or updated provider id, whether or not a change took
+            place and a short message describing the operation executed
         """
         message = ""
         # check if provider with the same name already exists
@@ -183,7 +216,8 @@ class ManageIQ(object):
             else:
                 message = "Provider %s already exists" % provider_name
         else:  # provider doesn't exists, adding it to manageiq
-            provider_id = self.add_new_provider(provider_name, provider_type, endpoints)
+            provider_id = self.add_new_provider(provider_name, provider_type,
+                                                endpoints)
             message = "Successfuly added %s provider" % provider_name
 
         res_args = dict(
@@ -201,6 +235,8 @@ def main():
             url=dict(default=os.environ.get('MIQ_URL', None)),
             username=dict(default=os.environ.get('MIQ_USERNAME', None)),
             password=dict(default=os.environ.get('MIQ_PASSWORD', None)),
+            state=dict(default='present',
+                       choices=['present', 'absent']),
             port=dict(required=True),
             hostname=dict(required=True),
             token=dict(required=True, no_log=True),
@@ -222,6 +258,7 @@ def main():
     password      = module.params['password']
     provider_name = module.params['name']
     provider_type = module.params['type']
+    state         = module.params['state']
     hostname      = module.params['hostname']
     port          = module.params['port']
     token         = module.params['token']
@@ -229,12 +266,17 @@ def main():
     h_port        = module.params['hawkular_port']
 
     manageiq = ManageIQ(module, url, username, password)
+    if state == 'present':
+        endpoints = [manageiq.generate_endpoint('default', hostname, port, 'bearer', token)]
+        if module.params['metrics']:
+            endpoints += [manageiq.generate_endpoint('hawkular', h_hostname, h_port, 'hawkular', token)]
 
-    endpoints = [manageiq.generate_endpoint('default', hostname, port, 'bearer', token)]
-    if module.params['metrics']:
-        endpoints += [manageiq.generate_endpoint('hawkular', h_hostname, h_port, 'hawkular', token)]
+        res_args = manageiq.add_or_update_provider(provider_name,
+                                                   provider_type,
+                                                   endpoints)
+    elif state == 'absent':
+        res_args = manageiq.delete_provider(provider_name)
 
-    res_args = manageiq.add_or_update_provider(provider_name, provider_type, endpoints)
     module.exit_json(**res_args)
 
 
