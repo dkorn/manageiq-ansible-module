@@ -247,4 +247,5 @@ def main():
     module.exit_json(**res_args)
 
 
-main()
+if __name__ == "__main__":
+    main()
