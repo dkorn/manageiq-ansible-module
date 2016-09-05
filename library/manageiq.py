@@ -117,7 +117,8 @@ class ManageIQ(object):
         except Exception as e:
             self.module.fail_json(msg="Failed to get provider data. Error: %s" % e)
 
-        host_port = lambda endpoint: (endpoint['hostname'], int(endpoint['port']))
+        def host_port(endpoint):
+            return (endpoint['hostname'], int(endpoint['port']))
 
         desired_by_role = {e['endpoint']['role']: host_port(e['endpoint']) for e in endpoints}
         result_by_role = {e['role']: host_port(e) for e in result['endpoints']}
