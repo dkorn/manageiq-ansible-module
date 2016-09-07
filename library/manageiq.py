@@ -1,5 +1,6 @@
 #!/usr/bin/python
 
+import os
 from ansible.module_utils.basic import *
 from miqclient.api import API as MiqApi
 
@@ -14,18 +15,15 @@ options:
   url:
     description:
       - the manageiq environment url
-    required: true
-    default: null
+    default: MIQ_URL env var if set. otherwise, it is required to pass it
   username:
     description:
       - manageiq username
-    required: true
-    default: null
+    default: MIQ_USERNAME env var if set. otherwise, it is required to pass it
   password:
     description:
       - manageiq password
-    required: true
-    default: null
+    default: MIQ_PASSWORD env var if set. otherwise, it is required to pass it
   name:
     description:
       - the added provider name in manageiq
@@ -215,9 +213,9 @@ def main():
             name=dict(required=True),
             type=dict(required=True,
                       choices=['openshift-origin', 'openshift-enterprise']),
-            url=dict(required=True),
-            username=dict(required=True),
-            password=dict(required=True, no_log=True),
+            url=dict(default=os.environ.get('MIQ_URL', None)),
+            username=dict(default=os.environ.get('MIQ_USERNAME', None)),
+            password=dict(default=os.environ.get('MIQ_PASSWORD', None)),
             port=dict(required=True),
             hostname=dict(required=True),
             token=dict(required=True, no_log=True),
@@ -229,6 +227,11 @@ def main():
             ('metrics', True, ['hawkular_hostname', 'hawkular_port']),
         ],
     )
+
+    for arg in ['url', 'username', 'password']:
+        if module.params[arg] in (None, ''):
+            module.fail_json(msg="missing required argument: {}".format(arg))
+
     url           = module.params['url']
     username      = module.params['username']
     password      = module.params['password']
