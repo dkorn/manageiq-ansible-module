@@ -6,10 +6,10 @@
     manageiq:
       name: '{{ name }}'
       type: '{{ type }}'
-      url: '{{ url | default(omit) }}'
-      username: '{{ username | default(omit) }}'
-      password: '{{ password | default(omit) }}'
       state: '{{ state }}'
+      miq_url: '{{ miq_url | default(omit) }}'
+      miq_username: '{{ miq_username | default(omit) }}'
+      miq_password: '{{ miq_password | default(omit) }}'
       hostname: '{{ hostname }}'
       port: '{{ port }}'
       token: '{{ token }}'

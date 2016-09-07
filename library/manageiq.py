@@ -12,15 +12,15 @@ short_description: Execute various operations in ManageIQ
 requirements: [ ManageIQ/manageiq-api-client-python ]
 author: Daniel Korn (@dkorn)
 options:
-  url:
+  miq_url:
     description:
       - the manageiq environment url
     default: MIQ_URL env var if set. otherwise, it is required to pass it
-  username:
+  miq_username:
     description:
       - manageiq username
     default: MIQ_USERNAME env var if set. otherwise, it is required to pass it
-  password:
+  miq_password:
     description:
       - manageiq password
     default: MIQ_PASSWORD env var if set. otherwise, it is required to pass it
@@ -82,9 +82,9 @@ EXAMPLES = '''
     name: 'Molecule'
     type: 'openshift-enterprise'
     state: 'present'
-    url: 'http://localhost:3000'
-    username: 'admin'
-    password: '******'
+    miq_url: 'http://localhost:3000'
+    miq_username: 'admin'
+    miq_password: '******'
     hostname: 'oshift01.redhat.com'
     port: '8443'
     token: '******'
@@ -257,11 +257,11 @@ def main():
             name=dict(required=True),
             type=dict(required=True,
                       choices=['openshift-origin', 'openshift-enterprise']),
-            url=dict(default=os.environ.get('MIQ_URL', None)),
-            username=dict(default=os.environ.get('MIQ_USERNAME', None)),
-            password=dict(default=os.environ.get('MIQ_PASSWORD', None)),
             state=dict(default='present',
                        choices=['present', 'absent']),
+            miq_url=dict(default=os.environ.get('MIQ_URL', None)),
+            miq_username=dict(default=os.environ.get('MIQ_USERNAME', None)),
+            miq_password=dict(default=os.environ.get('MIQ_PASSWORD', None)),
             port=dict(required=True),
             hostname=dict(required=True),
             token=dict(required=True, no_log=True),
@@ -274,13 +274,13 @@ def main():
         ],
     )
 
-    for arg in ['url', 'username', 'password']:
+    for arg in ['miq_url', 'miq_username', 'miq_password']:
         if module.params[arg] in (None, ''):
             module.fail_json(msg="missing required argument: {}".format(arg))
 
-    url           = module.params['url']
-    username      = module.params['username']
-    password      = module.params['password']
+    miq_url       = module.params['miq_url']
+    miq_username  = module.params['miq_username']
+    miq_password  = module.params['miq_password']
     provider_name = module.params['name']
     provider_type = module.params['type']
     state         = module.params['state']
@@ -290,7 +290,7 @@ def main():
     h_hostname    = module.params['hawkular_hostname']
     h_port        = module.params['hawkular_port']
 
-    manageiq = ManageIQ(module, url, username, password)
+    manageiq = ManageIQ(module, miq_url, miq_username, miq_password)
     if state == 'present':
         endpoints = [manageiq.generate_endpoint('default', hostname, port, 'bearer', token)]
         if module.params['metrics']:
