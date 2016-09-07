@@ -20,7 +20,7 @@ Alternatively, it is possible to add the following environment variables, and re
 
     `$ export MIQ_URL=http://localhost:3000`
     `$ export MIQ_USERNAME=admin`
-    `$ export MIQU_PASSWORD=******`
+    `$ export MIQ_PASSWORD=******`
 
     `$ ansible-playbook add_provider.yml --extra-vars "name=oshift01 type=openshift-origin hostname=oshift01.com port=8443 token=****** metrics=True hawkular_hostname=hawkular01.com hawkular_port=443"
 
