@@ -158,27 +158,12 @@ class ManageIQ(object):
         providers = self.client.collections.providers
         return next((p.id for p in providers if p.name == provider_name), None)
 
-    def generate_endpoints(self, hostname, port, token, h_hostname, h_port):
-        """ Creates the provider endpoints
-
-        Returns:
-            the provider's endpoints, including the hawkular ones if metrics is required
+    def generate_endpoint(self, role, hostname, port, authtype, token):
+        """ Returns one provider endpoint hash.
         """
-        endpoints = [{'endpoint': {'role': 'default', 'hostname': hostname,
-                                   'port': port},
-                      'authentication': {'role': 'bearer', 'auth_key': token}}]
-
-        # add hawkular endpoints if metrics is True
-        if self.module.params['metrics']:
-            if h_hostname is None or h_port is None:
-                self.module.fail_json(msg="hawkular hostname and port must be passed if metrics is True")
-            else:
-                endpoints.append({'endpoint': {'role': 'hawkular',
-                                               'hostname': h_hostname,
-                                               'port': h_port},
-                                  'authentication': {'role': 'hawkular',
-                                                     'auth_key': token}})
-        return endpoints
+        return {'endpoint': {'role': role, 'hostname': hostname,
+                             'port': port},
+                'authentication': {'role': authtype, 'auth_key': token}}
 
     def add_or_update_provider(self, provider_name, provider_type, endpoints):
         """ Adds an OpenShift containers provider to manageiq or update it's
@@ -245,7 +230,10 @@ def main():
 
     manageiq = ManageIQ(module, url, username, password)
 
-    endpoints = manageiq.generate_endpoints(hostname, port, token, h_hostname, h_port)
+    endpoints = [manageiq.generate_endpoint('default', hostname, port, 'bearer', token)]
+    if module.params['metrics']:
+        endpoints += [manageiq.generate_endpoint('hawkular', h_hostname, h_port, 'hawkular', token)]
+
     res_args = manageiq.add_or_update_provider(provider_name, provider_type, endpoints)
     module.exit_json(**res_args)
 
