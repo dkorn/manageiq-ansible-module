@@ -6,4 +6,6 @@ setup(
     author='Daniel Korn',
     author_email='dkorn@redhat.com',
     url='https://github.com/dkorn/manageiq-ansible-module',
+    package_dir={'': 'library'},
+    py_modules=["manageiq"]
 )
