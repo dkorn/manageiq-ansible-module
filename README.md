@@ -1,7 +1,11 @@
 # manageiq-ansible-module
 
-This Ansible module provides different ManageIQ operations. 
+[![travis image][]][travis status]
 
+This Ansible module provides different ManageIQ operations.
+
+[travis image]: https://api.travis-ci.org/dkorn/manageiq-ansible-module.svg?branch=master
+[travis status]: https://travis-ci.org/dkorn/manageiq-ansible-module/branches
 
 ### Prerequisites
 
@@ -23,4 +27,3 @@ Alternatively, it is possible to add the following environment variables, and re
     `$ export MIQ_PASSWORD=******`
 
     `$ ansible-playbook add_provider.yml --extra-vars "name=oshift01 type=openshift-origin hostname=oshift01.com port=8443 token=****** metrics=True hawkular_hostname=hawkular01.com hawkular_port=443"
-
