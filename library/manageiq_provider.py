@@ -43,6 +43,11 @@ options:
     required: false
     choices: ['present', 'absent']
     default: 'present'
+  zone:
+    description:
+      - the provider zone name in manageiq
+    required: false
+    default: null
   hostname:
     description:
       - the added provider hostname
@@ -82,6 +87,7 @@ EXAMPLES = '''
     name: 'Molecule'
     type: 'openshift-enterprise'
     state: 'present'
+    zone: 'default'
     miq_url: 'http://localhost:3000'
     miq_username: 'admin'
     miq_password: '******'
@@ -113,7 +119,7 @@ class ManageIQ(object):
         self.changed       = False
         self.providers_url = self.api_url + '/providers'
 
-    def required_updates(self, provider_id, endpoints):
+    def required_updates(self, provider_id, endpoints, zone_id):
         """ Checks whether an update is required for the provider
 
         Returns:
@@ -136,7 +142,7 @@ class ManageIQ(object):
 
         desired_by_role = {e['endpoint']['role']: host_port(e['endpoint']) for e in endpoints}
         result_by_role = {e['role']: host_port(e) for e in result['endpoints']}
-        if result_by_role == desired_by_role:
+        if result_by_role == desired_by_role and result['zone_id'] == zone_id:
             return {}
         updated = {role: {k: v for k, v in ep.items()
                           if k not in result_by_role[role] or v != result_by_role[role][k]}
@@ -146,20 +152,23 @@ class ManageIQ(object):
                  if role not in result_by_role}
         removed = {role: ep for role, ep in result_by_role.items()
                    if role not in desired_by_role}
+        if result['zone_id'] != zone_id:
+            updates['zone_id'] = zone_id
         return {"Updated": updated, "Added": added, "Removed": removed}
 
-    def update_provider(self, provider_id, provider_name, endpoints):
+    def update_provider(self, provider_id, provider_name, endpoints, zone_id):
         """ Updates the existing provider with new parameters
         """
         try:
             self.client.post('{api_url}/providers/{id}'.format(api_url=self.api_url, id=provider_id),
                              action='edit',
+                             zone={'id': zone_id},
                              connection_configurations=endpoints)
             self.changed = True
         except Exception as e:
             self.module.fail_json(msg="Failed to update provider. Error: %s" % e)
 
-    def add_new_provider(self, provider_name, provider_type, endpoints):
+    def add_new_provider(self, provider_name, provider_type, endpoints, zone_id):
         """ Adds a provider to manageiq
 
         Returns:
@@ -168,12 +177,22 @@ class ManageIQ(object):
         try:
             result = self.client.post(self.providers_url, name=provider_name,
                                       type=ManageIQ.openshift_provider_types[provider_type],
+                                      zone={'id': zone_id},
                                       connection_configurations=endpoints)
             provider_id = result['results'][0]['id']
             self.changed = True
         except Exception as e:
             self.module.fail_json(msg="Failed to add provider. Error: %s" % e)
         return provider_id
+
+    def find_zone_by_name(self, zone_name):
+        """ Searches the zone name in manageiq existing zones
+
+        Returns:
+            the zone id if it exists in manageiq, None otherwise
+        """
+        zones = self.client.collections.zones
+        return next((z.id for z in zones if z.name == zone_name), None)
 
     def find_provider_by_name(self, provider_name):
         """ Searches the provider name in manageiq existing providers
@@ -214,7 +233,7 @@ class ManageIQ(object):
         else:
             return dict(task_id=None, changed=self.changed, msg="Provider {provider_name} doesn't exist".format(provider_name=provider_name))
 
-    def add_or_update_provider(self, provider_name, provider_type, endpoints):
+    def add_or_update_provider(self, provider_name, provider_type, endpoints, zone):
         """ Adds an OpenShift containers provider to manageiq or update it's
         attributes in case a provider with the same name already exists
 
@@ -223,13 +242,14 @@ class ManageIQ(object):
             place and a short message describing the operation executed
         """
         message = ""
+        zone_id = self.find_zone_by_name(zone or 'default')
         # check if provider with the same name already exists
         provider_id = self.find_provider_by_name(provider_name)
         updates = {}
         if provider_id:  # provider exists
-            updates = self.required_updates(provider_id, endpoints)
+            updates = self.required_updates(provider_id, endpoints, zone_id)
             if updates:
-                self.update_provider(provider_id, provider_name, endpoints)
+                self.update_provider(provider_id, provider_name, endpoints, zone_id)
                 message = "Successfuly updated {provider} provider".format(
                     provider=provider_name)
             else:
@@ -242,8 +262,7 @@ class ManageIQ(object):
             )
         else:  # provider doesn't exists, adding it to manageiq
             provider_id = self.add_new_provider(provider_name, provider_type,
-                                                endpoints)
-            message = "Successfuly added %s provider" % provider_name
+                                                endpoints, zone_id)
             return dict(
                 provider_id=provider_id,
                 changed=self.changed,
@@ -257,6 +276,7 @@ def main():
             name=dict(required=True),
             type=dict(required=True,
                       choices=['openshift-origin', 'openshift-enterprise']),
+            zone=dict(required=False, type='str'),
             state=dict(default='present',
                        choices=['present', 'absent']),
             miq_url=dict(default=os.environ.get('MIQ_URL', None)),
@@ -284,6 +304,7 @@ def main():
     provider_name = module.params['name']
     provider_type = module.params['type']
     state         = module.params['state']
+    zone          = module.params['zone']
     hostname      = module.params['hostname']
     port          = module.params['port']
     token         = module.params['token']
@@ -298,7 +319,8 @@ def main():
 
         res_args = manageiq.add_or_update_provider(provider_name,
                                                    provider_type,
-                                                   endpoints)
+                                                   endpoints,
+                                                   zone)
     elif state == 'absent':
         res_args = manageiq.delete_provider(provider_name)
 

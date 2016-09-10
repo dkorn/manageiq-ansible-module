@@ -33,6 +33,14 @@ def the_provider():
 
 
 @pytest.fixture
+def the_zone():
+    the_zone = Mock()
+    the_zone.name = "default"
+    the_zone.id = 1
+    yield the_zone
+
+
+@pytest.fixture
 def miq_ansible_module():
     miq_ansible_module = Mock(spec=AnsibleModule)
     yield miq_ansible_module
@@ -53,7 +61,9 @@ class AnsibleModuleFailed(Exception):
 
 
 @pytest.fixture()
-def miq(miq_api_class, miq_ansible_module, the_provider):
+def miq(miq_api_class, miq_ansible_module, the_provider, the_zone):
+    miq_ansible_module.params = {'metrics': True}
+
     def fail(msg):
         raise AnsibleModuleFailed(msg)
 
@@ -73,8 +83,9 @@ def miq(miq_api_class, miq_ansible_module, the_provider):
          'zone_id': 1}])
     miq_api_class.return_value.get.return_value = dict(endpoints=[
         {'port': PROVIDER_PORT, 'role': 'default',
-         'hostname': PROVIDER_HOSTNAME}])
+         'hostname': PROVIDER_HOSTNAME}], zone_id=1)
     miq_api_class.return_value.collections.providers = [the_provider]
+    miq_api_class.return_value.collections.zones = [the_zone]
 
     yield miq
 
@@ -92,7 +103,7 @@ def test_generate_endpoint(miq):
 def test_will_add_provider_if_none_present(miq, endpoints):
     miq.client.collections.providers = []
     res_args = miq.add_or_update_provider(
-        PROVIDER_NAME, "openshift-origin", endpoints)
+        PROVIDER_NAME, "openshift-origin", endpoints, "default")
     assert res_args == {
         'changed': True,
         'msg': 'Successfuly added {} provider'.format(PROVIDER_NAME),
@@ -110,12 +121,13 @@ def test_will_add_provider_if_none_present(miq, endpoints):
              'authentication': {'auth_key': PROVIDER_TOKEN,
                                 'role': 'hawkular'}}],
         name=PROVIDER_NAME,
-        type='ManageIQ::Providers::Openshift::ContainerManager')
+        type='ManageIQ::Providers::Openshift::ContainerManager',
+        zone={'id': 1})
 
 
 def test_will_update_provider_if_present(miq, endpoints, the_provider):
     res_args = miq.add_or_update_provider(
-        PROVIDER_NAME, "openshift-origin", endpoints)
+        PROVIDER_NAME, "openshift-origin", endpoints, 'default')
     assert res_args == {
         'changed': True,
         'msg': 'Successfuly updated {} provider'.format(PROVIDER_NAME),
@@ -134,5 +146,5 @@ def test_reports_error(miq, endpoints, the_provider, miq_api_class):
     miq_api_class().get.side_effect = Exception("foo")
     with pytest.raises(AnsibleModuleFailed) as excinfo:
         miq.add_or_update_provider(
-            PROVIDER_NAME, "openshift-origin", endpoints)
+            PROVIDER_NAME, "openshift-origin", endpoints, 'default')
     assert str(excinfo.value) == "Failed to get provider data. Error: foo"
