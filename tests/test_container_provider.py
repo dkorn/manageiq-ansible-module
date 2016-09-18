@@ -29,8 +29,10 @@ def miq_ansible_module():
 
 @pytest.fixture
 def endpoints(miq):
-    endpoints = miq.generate_endpoints("The hostname", "12345", "The token",
-                                       "The HHostname", "54321")
+    endpoints = [miq.generate_endpoint("default", "The hostname", "12345",
+                                       "bearer", "The token"),
+                 miq.generate_endpoint("hawkular", "The HHostname", "54321",
+                                       "hawkular", "The token")]
     yield endpoints
 
 
@@ -40,8 +42,6 @@ class AnsibleModuleFailed(Exception):
 
 @pytest.fixture()
 def miq(miq_api_class, miq_ansible_module, the_provider):
-    miq_ansible_module.params = {'metrics': True}
-
     def fail(msg):
         raise AnsibleModuleFailed(msg)
 
@@ -57,31 +57,14 @@ def miq(miq_api_class, miq_ansible_module, the_provider):
     yield miq
 
 
-def test_generate_endpoints_with_metrics(miq):
-    endpoints = miq.generate_endpoints("The hostname", "12345", "The token",
-                                       "The HHostname", "54321")
-    assert endpoints == [
-        {'authentication': {'auth_key': 'The token', 'role': 'bearer'},
-         'endpoint': {'hostname': 'The hostname',
-                      'port': '12345',
-                      'role': 'default'}},
-        {'authentication': {'auth_key': 'The token', 'role': 'hawkular'},
-         'endpoint': {'hostname': 'The HHostname',
-                      'port': '54321',
-                      'role': 'hawkular'}}
-    ]
-
-
-def test_generate_endpoints_without_metrics(miq):
-    miq.module.params = {'metrics': False}
-    endpoints = miq.generate_endpoints("The hostname", "12345", "The token",
-                                       object(), object())
-    assert endpoints == [
-        {'authentication': {'auth_key': 'The token', 'role': 'bearer'},
-         'endpoint': {'hostname': 'The hostname',
-                      'port': '12345',
-                      'role': 'default'}},
-    ]
+def test_generate_endpoint(miq):
+    endpoint = miq.generate_endpoint("default", "The hostname", "12345",
+                                     "bearer", "The token")
+    assert endpoint == {'authentication': {'auth_key': 'The token',
+                                           'role': 'bearer'},
+                        'endpoint': {'hostname': 'The hostname',
+                                     'port': '12345',
+                                     'role': 'default'}}
 
 
 def test_will_add_provider_if_none_present(miq, endpoints):
