@@ -93,7 +93,14 @@ def test_will_update_provider_if_present(miq, endpoints, the_provider):
         "The provider", "openshift-origin", endpoints)
     assert res_args == {'changed': True,
                         'msg': 'Successfuly updated The provider provider',
-                        'provider_id': the_provider.id}
+                        'provider_id': the_provider.id,
+                        'updates': {
+                            'Added':
+                                {'hawkular': {
+                                    'hostname': 'The HHostname',
+                                    'port': 54321}},
+                            'Removed': {},
+                            'Updated': {}}}
 
 
 def test_reports_error(miq, endpoints, the_provider, miq_api_class):
