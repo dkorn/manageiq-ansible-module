@@ -18,7 +18,7 @@ ManageIQ Python API Client package [manageiq-api-client-python] (https://github.
 Currently, the module supports adding an OpenShift containers provider to manageiq.
 An example playbook `add_provider.yml` is provided and can be run by:
 
-    `$ ansible-playbook add_provider.yml --extra-vars "name=oshift01 type=openshift-origin state=present url=http://localhost:3000 username=user password=****** hostname=oshift01.com port=8443 token=****** metrics=True hawkular_hostname=hawkular01.com hawkular_port=443"
+    `$ ansible-playbook add_provider.yml --extra-vars "name=oshift01 type=openshift-origin state=present miq_url=http://localhost:3000 miq_username=user miq_password=****** hostname=oshift01.com port=8443 token=****** metrics=True hawkular_hostname=hawkular01.com hawkular_port=443"
 
 Alternatively, it is possible to add the following environment variables, and remove them from the extra-vars string:
 
