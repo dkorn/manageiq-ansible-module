@@ -100,9 +100,17 @@ def miq(miq_api_class, miq_ansible_module, the_provider, the_amazon_provider, th
          'type': u'ManageIQ::Providers::Openshift::ContainerManager',
          'updated_on': u'2016-09-08T15:11:29Z',
          'zone_id': 1}])
-    miq_api_class.return_value.get.return_value = dict(endpoints=[
-        {'port': PROVIDER_PORT, 'role': 'default',
-         'hostname': PROVIDER_HOSTNAME}], zone_id=1)
+    miq_api_class.return_value.get.return_value = dict(
+        endpoints=[{'port': PROVIDER_PORT, 'role': 'default',
+                    'hostname': PROVIDER_HOSTNAME}], zone_id=1,
+        authentications=[{'authtype': 'hawkular',
+                          'updated_on': '2020-09-22T11:58:30Z',
+                          'status': 'Valid',
+                          'status_details': 'Ok'},
+                         {'authtype': 'bearer',
+                          'updated_on': '2020-09-22T11:58:30Z',
+                          'status': 'Valid',
+                          'status_details': 'Ok'}])
     miq_api_class.return_value.collections.providers = [
         the_provider, the_amazon_provider]
     miq_api_class.return_value.collections.zones = [the_zone]
@@ -129,7 +137,7 @@ def test_will_add_provider_if_none_present(miq, openshift_endpoints):
         "default", None)
     assert res_args == {
         'changed': True,
-        'msg': 'Successfuly added {} provider'.format(PROVIDER_NAME),
+        'msg': 'Successfuly added {} provider. Authentication: All Valid'.format(PROVIDER_NAME),
         'provider_id': PROVIDER_ID}
     miq.client.post.assert_called_once_with(
         '{}/api/providers'.format(MANAGEIQ_HOSTNAME),
@@ -156,7 +164,7 @@ def test_will_add_amazon_provider_if_none_present(miq, amazon_endpoints):
         "default", AMAZON_PROVIDER_REGION)
     assert res_args == {
         "changed": True,
-        "msg": "Successfuly added {} provider".format(AMAZON_PROVIDER_NAME),
+        "msg": "Successfuly added {} provider. Authentication: All Valid".format(AMAZON_PROVIDER_NAME),
         "provider_id": PROVIDER_ID
         }
     miq.client.post.assert_called_once_with(
@@ -178,7 +186,7 @@ def test_will_update_provider_if_present(miq, openshift_endpoints, the_provider)
         "default", None)
     assert res_args == {
         'changed': True,
-        'msg': 'Successfuly updated {} provider'.format(PROVIDER_NAME),
+        'msg': 'Successfuly updated {} provider. Authentication: All Valid'.format(PROVIDER_NAME),
         'provider_id': the_provider.id,
         'updates': {
             'Added':
@@ -196,7 +204,7 @@ def test_will_update_amazon_provider_if_present(miq, amazon_endpoints, the_amazo
         "other_region")
     assert res_args == {
         'changed': True,
-        'msg': 'Successfuly updated {} provider'.format(AMAZON_PROVIDER_NAME),
+        'msg': 'Successfuly updated {} provider. Authentication: All Valid'.format(AMAZON_PROVIDER_NAME),
         'provider_id': the_amazon_provider.id,
         'updates': {
             'Added': {},
