@@ -5,7 +5,7 @@ from mock import Mock
 from ansible.module_utils.basic import AnsibleModule
 
 from miqclient.api import API
-import manageiq
+import manageiq_provider
 
 
 PROVIDER_NAME = "Provider name 1 with some unicode characters «ταБЬℓσ»"
@@ -21,7 +21,7 @@ MANAGEIQ_HOSTNAME = "http://themanageiq.tld"
 @pytest.fixture(autouse=True)
 def miq_api_class(monkeypatch):
     miq_api_class = Mock(spec=API)
-    monkeypatch.setattr("manageiq.MiqApi", miq_api_class)
+    monkeypatch.setattr("manageiq_provider.MiqApi", miq_api_class)
     yield miq_api_class
 
 
@@ -58,8 +58,8 @@ def miq(miq_api_class, miq_ansible_module, the_provider):
         raise AnsibleModuleFailed(msg)
 
     miq_ansible_module.fail_json = fail
-    miq = manageiq.ManageIQ(miq_ansible_module, MANAGEIQ_HOSTNAME,
-                            "The username", "The password")
+    miq = manageiq_provider.ManageIQ(miq_ansible_module, MANAGEIQ_HOSTNAME,
+                                     "The username", "The password")
 
     miq_api_class.return_value.post.return_value = dict(results=[
         {'api_version': u'v1',

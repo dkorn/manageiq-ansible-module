@@ -2,7 +2,7 @@
 
 [![travis image][]][travis status]
 
-This Ansible module provides different ManageIQ operations.
+Ansible modules which provide different ManageIQ operations.
 
 [travis image]: https://api.travis-ci.org/dkorn/manageiq-ansible-module.svg?branch=master
 [travis status]: https://travis-ci.org/dkorn/manageiq-ansible-module/branches
@@ -15,7 +15,9 @@ ManageIQ Python API Client package [manageiq-api-client-python] (https://github.
 
 ### Getting Started
 
-Currently, the module supports adding an OpenShift containers provider to manageiq.
+###### manageiq_provider module
+
+The `manageiq_provider` module currently supports adding, updating and deleting an OpenShift provider to manageiq.
 An example playbook `add_provider.yml` is provided and can be run by:
 
     `$ ansible-playbook add_provider.yml --extra-vars "name=oshift01 type=openshift-origin state=present miq_url=http://localhost:3000 miq_username=user miq_password=****** hostname=oshift01.com port=8443 token=****** metrics=True hawkular_hostname=hawkular01.com hawkular_port=443"
@@ -27,3 +29,10 @@ Alternatively, it is possible to add the following environment variables, and re
     `$ export MIQ_PASSWORD=******`
 
     `$ ansible-playbook add_provider.yml --extra-vars "name=oshift01 type=openshift-origin state=present hostname=oshift01.com port=8443 token=****** metrics=True hawkular_hostname=hawkular01.com hawkular_port=443"
+
+To update an existing provider pass the changed values together with the required parameters.
+
+To delete an OpenShift provider change `state=absent`.
+
+After addition or update, the authentication validation is verified for the provider.
+
