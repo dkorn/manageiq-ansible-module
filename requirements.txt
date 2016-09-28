@@ -1,0 +1,2 @@
+-e git+https://github.com/ManageIQ/manageiq-api-client-python.git#egg=manageiq-api-client-python
+-e .
