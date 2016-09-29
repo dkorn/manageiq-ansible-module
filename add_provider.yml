@@ -3,7 +3,7 @@
 
   tasks:
   - name: Add Openshift Containers Provider to ManageIQ
-    manageiq:
+    manageiq_provider:
       name: '{{ name }}'
       type: '{{ type }}'
       state: '{{ state }}'

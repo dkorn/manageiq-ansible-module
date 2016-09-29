@@ -7,8 +7,8 @@ from miqclient.api import API as MiqApi
 
 DOCUMENTATION = '''
 ---
-module: manageiq
-short_description: Execute various operations in ManageIQ
+module: manageiq_provider
+short_description: add, update, delete provider in ManageIQ
 requirements: [ ManageIQ/manageiq-api-client-python ]
 author: Daniel Korn (@dkorn)
 options:
@@ -78,7 +78,7 @@ options:
 
 EXAMPLES = '''
 # Add Openshift Containers Provider to ManageIQ
-  manageiq:
+  manageiq_provider:
     name: 'Molecule'
     type: 'openshift-enterprise'
     state: 'present'
