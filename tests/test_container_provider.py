@@ -128,7 +128,7 @@ def test_will_add_provider_if_none_present(miq, endpoints):
 
 def test_will_update_provider_if_present(miq, endpoints, the_provider):
     res_args = miq.add_or_update_provider(
-        PROVIDER_NAME, "openshift-origin", endpoints, 'default')
+        PROVIDER_NAME, "openshift-origin", endpoints, "default")
     assert res_args == {
         'changed': True,
         'msg': 'Successfuly updated {} provider'.format(PROVIDER_NAME),
@@ -147,5 +147,5 @@ def test_reports_error(miq, endpoints, the_provider, miq_api_class):
     miq_api_class().get.side_effect = Exception("foo")
     with pytest.raises(AnsibleModuleFailed) as excinfo:
         miq.add_or_update_provider(
-            PROVIDER_NAME, "openshift-origin", endpoints, 'default')
+            PROVIDER_NAME, "openshift-origin", endpoints, "default")
     assert str(excinfo.value) == "Failed to get provider data. Error: foo"
