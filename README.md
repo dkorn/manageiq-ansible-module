@@ -52,3 +52,9 @@ Alternatively, it is possible to add the following environment variables, and re
     `$ ansible-playbook assign_policy.yml --extra-vars "entity=policy entity_name=openscap resource=provider resource_name=openshift01 state=present"
 
 To unassign a policy/policy profile on a resource change `state=absent`.
+
+### SSL Cert Verification
+
+SSL verification for HTTPS requests is enabled by default.
+To use a self-signed certificate pass the certificate file or directory path using the ca_bundle_path option: `ca_bundle_path: '/path/to/certfile'`.
+To ignore verifying the SSL certificate pass `verify_ssl: False`

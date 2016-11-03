@@ -24,6 +24,17 @@ options:
     description:
       - manageiq password
     default: MIQ_PASSWORD env var if set. otherwise, it is required to pass it
+  verify_ssl:
+    description:
+      - whether SSL certificates should be verified for HTTPS requests
+    required: false
+    default: True
+    choices: ['True', 'False']
+  ca_bundle_path:
+    description:
+      - the path to a CA_BUNDLE file or directory with certificates
+    required: false
+    default: null
   name:
     description:
       - the added provider name in manageiq
@@ -87,36 +98,53 @@ EXAMPLES = '''
     name: 'Molecule'
     type: 'openshift-enterprise'
     state: 'present'
-    zone: 'default'
-    miq_url: 'http://localhost:3000'
+    miq_url: 'http://miq.example.com'
     miq_username: 'admin'
     miq_password: '******'
+    zone: 'default'
     provider_api_hostname: 'oshift01.redhat.com'
     provider_api_port: '8443'
     provider_api_auth_token: '******'
+    verify_ssl: False
     metrics: True
     hawkular_hostname: 'hawkular01.redhat.com'
     hawkular_port: '443'
+
+# Remove Openshift Provider from HTTPS ManageIQ environment
+  manageiq_provider:
+    name: 'OS01'
+    type: 'openshift-enterprise'
+    state: 'absent'
+    miq_url: 'https://miq.example.com'
+    miq_username: 'admin'
+    miq_password: '******'
+    verify_ssl: True
+    ca_bundle_path: '/path/to/certfile'
+    provider_api_hostname: 'oshift01.redhat.com'
+    provider_api_port: '8443'
+    provider_api_auth_token: '******'
 '''
 
 
 class ManageIQ(object):
     """ ManageIQ object to execute various operations in manageiq
 
-    url      - manageiq environment url
-    user     - the username in manageiq
-    password - the user password in manageiq
+    url            - manageiq environment url
+    user           - the username in manageiq
+    password       - the user password in manageiq
+    verify_ssl     - whether SSL certificates should be verified for HTTPS requests
+    ca_bundle_path - the path to a CA_BUNDLE file or directory with certificates
     """
     OPENSHIFT_DEFAULT_PORT = '8443'
     openshift_provider_types = {'openshift-origin': 'ManageIQ::Providers::Openshift::ContainerManager',
                                 'openshift-enterprise': 'ManageIQ::Providers::OpenshiftEnterprise::ContainerManager'}
 
-    def __init__(self, module, url, user, password):
+    def __init__(self, module, url, user, password, verify_ssl, ca_bundle_path):
         self.module        = module
         self.api_url       = url + '/api'
         self.user          = user
         self.password      = password
-        self.client        = MiqApi(self.api_url, (self.user, self.password))
+        self.client        = MiqApi(self.api_url, (self.user, self.password), verify_ssl=verify_ssl, ca_bundle_path=ca_bundle_path)
         self.changed       = False
         self.providers_url = self.api_url + '/providers'
 
@@ -154,7 +182,7 @@ class ManageIQ(object):
         removed = {role: ep for role, ep in result_by_role.items()
                    if role not in desired_by_role}
         if result['zone_id'] != zone_id:
-            updates['zone_id'] = zone_id
+            updated['zone_id'] = zone_id
         return {"Updated": updated, "Added": added, "Removed": removed}
 
     def update_provider(self, provider_id, provider_name, endpoints, zone_id):
@@ -284,9 +312,11 @@ def main():
             miq_username=dict(default=os.environ.get('MIQ_USERNAME', None)),
             miq_password=dict(default=os.environ.get('MIQ_PASSWORD', None)),
             provider_api_port=dict(default=ManageIQ.OPENSHIFT_DEFAULT_PORT,
-                              required=False),
+                                   required=False),
             provider_api_hostname=dict(required=True),
             provider_api_auth_token=dict(required=True, no_log=True),
+            verify_ssl=dict(require=False, type='bool', default=True),
+            ca_bundle_path=dict(required=False, type='str', defualt=None),
             metrics=dict(required=False, type='bool', default=False),
             hawkular_hostname=dict(required=False),
             hawkular_port=dict(required=False)
@@ -300,20 +330,22 @@ def main():
         if module.params[arg] in (None, ''):
             module.fail_json(msg="missing required argument: {}".format(arg))
 
-    miq_url       = module.params['miq_url']
-    miq_username  = module.params['miq_username']
-    miq_password  = module.params['miq_password']
-    provider_name = module.params['name']
-    provider_type = module.params['type']
-    state         = module.params['state']
-    zone          = module.params['zone']
-    hostname      = module.params['provider_api_hostname']
-    port          = module.params['provider_api_port']
-    token         = module.params['provider_api_auth_token']
-    h_hostname    = module.params['hawkular_hostname']
-    h_port        = module.params['hawkular_port']
+    miq_url        = module.params['miq_url']
+    miq_username   = module.params['miq_username']
+    miq_password   = module.params['miq_password']
+    verify_ssl     = module.params['verify_ssl']
+    ca_bundle_path = module.params['ca_bundle_path']
+    provider_name  = module.params['name']
+    provider_type  = module.params['type']
+    state          = module.params['state']
+    zone           = module.params['zone']
+    hostname       = module.params['provider_api_hostname']
+    port           = module.params['provider_api_port']
+    token          = module.params['provider_api_auth_token']
+    h_hostname     = module.params['hawkular_hostname']
+    h_port         = module.params['hawkular_port']
 
-    manageiq = ManageIQ(module, miq_url, miq_username, miq_password)
+    manageiq = ManageIQ(module, miq_url, miq_username, miq_password, verify_ssl, ca_bundle_path)
     if state == 'present':
         endpoints = [manageiq.generate_endpoint('default', hostname, port, 'bearer', token)]
         if module.params['metrics']:

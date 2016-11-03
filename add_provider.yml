@@ -16,6 +16,7 @@
       metrics: '{{ metrics | default(omit) }}'
       hawkular_hostname: '{{ hawkular_hostname | default(omit) }}'
       hawkular_port: '{{ hawkular_port | default(omit) }}'
+      verify_ssl: '{{ verify_ssl | default(True) }}'
     register: result
 
   - debug: var=result
