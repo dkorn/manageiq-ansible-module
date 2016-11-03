@@ -31,7 +31,7 @@ options:
     default: null
   type:
     description:
-      - the openshift provider type
+      - the provider's type
     required: true
     choices: ['openshift-origin', 'openshift-enterprise']
   state:
@@ -48,19 +48,19 @@ options:
       - the provider zone name in manageiq
     required: false
     default: null
-  hostname:
+  provider_api_hostname:
     description:
-      - the added provider hostname
+      - the provider API hostname
     required: true
     default: null
-  port:
+  provider_api_port:
     description:
-      - the port used by the added provider
+      - the port used by the provider API
     required: true
     default: null
-  token:
+  provider_api_auth_token:
     description:
-      - the added provider token
+      - the provider api auth token
     required: true
     default: null
   metrics:
@@ -91,9 +91,9 @@ EXAMPLES = '''
     miq_url: 'http://localhost:3000'
     miq_username: 'admin'
     miq_password: '******'
-    hostname: 'oshift01.redhat.com'
-    port: '8443'
-    token: '******'
+    provider_api_hostname: 'oshift01.redhat.com'
+    provider_api_port: '8443'
+    provider_api_auth_token: '******'
     metrics: True
     hawkular_hostname: 'hawkular01.redhat.com'
     hawkular_port: '443'
@@ -107,6 +107,7 @@ class ManageIQ(object):
     user     - the username in manageiq
     password - the user password in manageiq
     """
+    OPENSHIFT_DEFAULT_PORT = '8443'
     openshift_provider_types = {'openshift-origin': 'ManageIQ::Providers::Openshift::ContainerManager',
                                 'openshift-enterprise': 'ManageIQ::Providers::OpenshiftEnterprise::ContainerManager'}
 
@@ -234,8 +235,8 @@ class ManageIQ(object):
             return dict(task_id=None, changed=self.changed, msg="Provider {provider_name} doesn't exist".format(provider_name=provider_name))
 
     def add_or_update_provider(self, provider_name, provider_type, endpoints, zone):
-        """ Adds an OpenShift containers provider to manageiq or update it's
-        attributes in case a provider with the same name already exists
+        """ Adds a provider to manageiq or update its attributes in case
+        a provider with the same name already exists
 
         Returns:
             the added or updated provider id, whether or not a change took
@@ -282,9 +283,10 @@ def main():
             miq_url=dict(default=os.environ.get('MIQ_URL', None)),
             miq_username=dict(default=os.environ.get('MIQ_USERNAME', None)),
             miq_password=dict(default=os.environ.get('MIQ_PASSWORD', None)),
-            port=dict(required=True),
-            hostname=dict(required=True),
-            token=dict(required=True, no_log=True),
+            provider_api_port=dict(default=ManageIQ.OPENSHIFT_DEFAULT_PORT,
+                              required=False),
+            provider_api_hostname=dict(required=True),
+            provider_api_auth_token=dict(required=True, no_log=True),
             metrics=dict(required=False, type='bool', default=False),
             hawkular_hostname=dict(required=False),
             hawkular_port=dict(required=False)
@@ -305,9 +307,9 @@ def main():
     provider_type = module.params['type']
     state         = module.params['state']
     zone          = module.params['zone']
-    hostname      = module.params['hostname']
-    port          = module.params['port']
-    token         = module.params['token']
+    hostname      = module.params['provider_api_hostname']
+    port          = module.params['provider_api_port']
+    token         = module.params['provider_api_auth_token']
     h_hostname    = module.params['hawkular_hostname']
     h_port        = module.params['hawkular_port']
 
