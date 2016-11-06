@@ -40,7 +40,7 @@ options:
       - the added provider name in manageiq
     required: true
     default: null
-  type:
+  provider_type:
     description:
       - the provider's type
     required: true
@@ -96,7 +96,7 @@ EXAMPLES = '''
 # Add Openshift Containers Provider to ManageIQ
   manageiq_provider:
     name: 'Molecule'
-    type: 'openshift-enterprise'
+    provider_type: 'openshift-enterprise'
     state: 'present'
     miq_url: 'http://miq.example.com'
     miq_username: 'admin'
@@ -113,7 +113,7 @@ EXAMPLES = '''
 # Remove Openshift Provider from HTTPS ManageIQ environment
   manageiq_provider:
     name: 'OS01'
-    type: 'openshift-enterprise'
+    provider_type: 'openshift-enterprise'
     state: 'absent'
     miq_url: 'https://miq.example.com'
     miq_username: 'admin'
@@ -135,9 +135,11 @@ class ManageIQ(object):
     verify_ssl     - whether SSL certificates should be verified for HTTPS requests
     ca_bundle_path - the path to a CA_BUNDLE file or directory with certificates
     """
+
     OPENSHIFT_DEFAULT_PORT = '8443'
-    openshift_provider_types = {'openshift-origin': 'ManageIQ::Providers::Openshift::ContainerManager',
-                                'openshift-enterprise': 'ManageIQ::Providers::OpenshiftEnterprise::ContainerManager'}
+    provider_types = {
+        'openshift-origin': 'ManageIQ::Providers::Openshift::ContainerManager',
+        'openshift-enterprise': 'ManageIQ::Providers::OpenshiftEnterprise::ContainerManager'}
 
     def __init__(self, module, url, user, password, verify_ssl, ca_bundle_path):
         self.module        = module
@@ -205,7 +207,7 @@ class ManageIQ(object):
         """
         try:
             result = self.client.post(self.providers_url, name=provider_name,
-                                      type=ManageIQ.openshift_provider_types[provider_type],
+                                      type=ManageIQ.provider_types[provider_type],
                                       zone={'id': zone_id},
                                       connection_configurations=endpoints)
             provider_id = result['results'][0]['id']
@@ -303,9 +305,9 @@ def main():
     module = AnsibleModule(
         argument_spec=dict(
             name=dict(required=True),
-            type=dict(required=True,
-                      choices=['openshift-origin', 'openshift-enterprise']),
             zone=dict(required=False, type='str'),
+            provider_type=dict(required=True,
+                               choices=['openshift-origin', 'openshift-enterprise']),
             state=dict(default='present',
                        choices=['present', 'absent']),
             miq_url=dict(default=os.environ.get('MIQ_URL', None)),
@@ -336,7 +338,7 @@ def main():
     verify_ssl     = module.params['verify_ssl']
     ca_bundle_path = module.params['ca_bundle_path']
     provider_name  = module.params['name']
-    provider_type  = module.params['type']
+    provider_type  = module.params['provider_type']
     state          = module.params['state']
     zone           = module.params['zone']
     hostname       = module.params['provider_api_hostname']
@@ -346,6 +348,7 @@ def main():
     h_port         = module.params['hawkular_port']
 
     manageiq = ManageIQ(module, miq_url, miq_username, miq_password, verify_ssl, ca_bundle_path)
+
     if state == 'present':
         endpoints = [manageiq.generate_endpoint('default', hostname, port, 'bearer', token)]
         if module.params['metrics']:
