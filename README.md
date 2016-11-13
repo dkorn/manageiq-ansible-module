@@ -23,7 +23,7 @@ Example playbooks `add_openshift_provider.yml` and `add_amazon_provider` are pro
 
 Usage:
 
-    `$ ansible-playbook add_openshift_provider.yml --extra-vars "name=oshift01 provider_type=openshift-origin state=present zone=default miq_url=http://localhost:3000 miq_username=user miq_password=****** provider_api_hostname=oshift01.com provider_api_port=8443 provider_api_auth_token=****** metrics=True hawkular_hostname=hawkular01.com hawkular_port=443"
+    `$ ansible-playbook add_openshift_provider.yml`
 
 
 To update an existing provider pass the changed values together with the required parameters.
@@ -40,7 +40,7 @@ An example playbook `assign_policy.yml` is provided.
 
 Usage:
 
-    `$ ansible-playbook assign_policy.yml --extra-vars "entity=policy entity_name=openscap resource=provider resource_name=openshift01 state=present miq_url=http://localhost:3000 miq_username=user miq_password=******"
+    `$ ansible-playbook assign_policy.yml`
 
 
 To unassign a policy/policy profile on a resource change `state=absent`.
