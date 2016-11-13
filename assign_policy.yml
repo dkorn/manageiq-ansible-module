@@ -4,14 +4,15 @@
   tasks:
   - name: Assign policy on an OpenShift provider in ManageIQ
     manageiq_policy_assignment:
-      entity: '{{ entity }}'
-      entity_name: '{{ entity_name }}'
-      resource: '{{ resource }}'
-      resource_name: '{{ resource_name }}'
-      state: '{{ state }}'
-      miq_url: '{{ miq_url | default(omit) }}'
-      miq_username: '{{ miq_username | default(omit) }}'
-      miq_password: '{{ miq_password | default(omit) }}'
+      entity: 'policy'
+      entity_name: 'example policy'
+      resource: 'provider'
+      resource_name: 'OpenShift01'
+      state: 'present'
+      miq_url: 'http://miq.example.com'
+      miq_username: 'admin'
+      miq_password: '******'
+      verify_ssl: False
     register: result
 
   - debug: var=result

@@ -4,19 +4,19 @@
   tasks:
   - name: Add Openshift Containers Provider to ManageIQ
     manageiq_provider:
-      name: '{{ name }}'
-      provider_type: '{{ provider_type }}'
-      state: '{{ state }}'
-      miq_url: '{{ miq_url | default(omit) }}'
-      miq_username: '{{ miq_username | default(omit) }}'
-      miq_password: '{{ miq_password | default(omit) }}'
-      provider_api_hostname: '{{ provider_api_hostname }}'
-      provider_api_port: '{{ provider_api_port | default(omit) }}'
-      provider_api_auth_token: '{{ provider_api_auth_token }}'
-      metrics: '{{ metrics | default(omit) }}'
-      hawkular_hostname: '{{ hawkular_hostname | default(omit) }}'
-      hawkular_port: '{{ hawkular_port | default(omit) }}'
-      verify_ssl: '{{ verify_ssl | default(True) }}'
+      name: 'Openshift01'
+      provider_type: 'openshift-origin'
+      state: 'present'
+      provider_api_hostname: 'os01.example.com'
+      provider_api_port: '8443'
+      provider_api_auth_token: '******'
+      metrics: True
+      hawkular_hostname: 'hawkular01.example.com'
+      hawkular_port: '443'
+      miq_url: 'http://miq.example.com'
+      miq_username: 'admin'
+      miq_password: '******'
+      verify_ssl: False
     register: result
 
   - debug: var=result

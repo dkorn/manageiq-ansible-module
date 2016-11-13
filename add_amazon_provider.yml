@@ -4,16 +4,16 @@
   tasks:
   - name: Add Amazon EC2 Provider to ManageIQ
     manageiq_provider:
-      name: '{{ name }}'
-      manager_type: '{{ manager_type }}'
-      provider_type: '{{ provider_type }}'
-      state: '{{ state }}'
-      miq_url: '{{ miq_url | default(omit) }}'
-      miq_username: '{{ miq_username | default(omit) }}'
-      miq_password: '{{ miq_password | default(omit) }}'
-      provider_region: '{{ provider_region }}'
-      access_key_id: '{{ access_key_id }}'
-      secret_access_key: '{{ secret_access_key }}'
+      name: 'AWS01'
+      provider_type: 'amazon'
+      state: 'present'
+      provider_region: 'us-west-2'
+      access_key_id: '******'
+      secret_access_key: '******'
+      miq_url: 'http://miq.example.com'
+      miq_username: 'admin'
+      miq_password: '******'
+      verify_ssl: False
     register: result
 
   - debug: var=result
