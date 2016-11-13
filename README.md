@@ -14,6 +14,7 @@ ManageIQ Python API Client package [manageiq-api-client-python] (https://github.
     `$ pip install git+https://github.com/ManageIQ/manageiq-api-client-python.git`
 
 
+
 ## Getting Started
 
 ### manageiq_provider module
@@ -46,12 +47,27 @@ Usage:
 To unassign a policy/policy profile on a resource change `state=absent`.
 
 
+### manageiq_custom_attributes module
+
+The `manageiq_custom_attributes` module supports adding, updating and deleting custom attributes on resources in ManageIQ.
+Currently the only resources (entities) that supports custom attributes are vms and providers.
+An example playbook `add_custom_attributes.yml` is provided.
+
+Usage:
+
+    `$ ansible-playbook add_custom_attributes.yml`
+
+To delete a custom attributes change `state=absent`.
+
+
+
 ## SSL Cert Verification
 
 SSL verification for HTTPS requests is enabled by default.
 
 To use a self-signed certificate pass the certificate file or directory path using the ca_bundle_path option: `ca_bundle_path: '/path/to/certfile'`.
 To ignore verifying the SSL certificate pass `verify_ssl: False`
+
 
 
 ## Using Environment Variables
