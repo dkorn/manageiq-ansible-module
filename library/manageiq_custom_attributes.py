@@ -49,6 +49,17 @@ options:
       - the custom attributes of the entity
     required: true
     default: null
+  verify_ssl:
+    description:
+      - whether SSL certificates should be verified for HTTPS requests
+    required: false
+    default: True
+    choices: ['True', 'False']
+  ca_bundle_path:
+    description:
+      - the path to a CA_BUNDLE file or directory with certificates
+    required: false
+    default: null
 '''
 
 EXAMPLES = '''
@@ -72,19 +83,21 @@ class ManageIQCustomAttributes(object):
     """ ManageIQ object to execute custom attibutes related operations
     in manageiq
 
-    url      - manageiq environment url
-    user     - the username in manageiq
-    password - the user password in manageiq
+    url            - manageiq environment url
+    user           - the username in manageiq
+    password       - the user password in manageiq
+    verify_ssl     - whether SSL certificates should be verified for HTTPS requests
+    ca_bundle_path - the path to a CA_BUNDLE file or directory with certificates
     """
 
     supported_entities = {'vm': 'vms', 'provider': 'providers'}
 
-    def __init__(self, module, url, user, password):
+    def __init__(self, module, url, user, password, verify_ssl, ca_bundle_path):
         self.module        = module
         self.api_url       = url + '/api'
         self.user          = user
         self.password      = password
-        self.client        = MiqApi(self.api_url, (self.user, self.password))
+        self.client        = MiqApi(self.api_url, (self.user, self.password), verify_ssl=verify_ssl, ca_bundle_path=ca_bundle_path)
         self.changed       = False
 
     def find_entity_by_name(self, entity_type, entity_name):
@@ -101,9 +114,9 @@ class ManageIQCustomAttributes(object):
         """
         try:
             url = '{api_url}/{entity_type}/{id}?expand=custom_attributes'.format(
-                   api_url=self.api_url,
-                   entity_type=ManageIQCustomAttributes.supported_entities[entity_type],
-                   id=entity_id)
+                api_url=self.api_url,
+                entity_type=ManageIQCustomAttributes.supported_entities[entity_type],
+                id=entity_id)
             result = self.client.get(url)
             return result.get('custom_attributes', [])
         except Exception as e:
@@ -114,9 +127,9 @@ class ManageIQCustomAttributes(object):
         """ Returns the added custom attributes """
         try:
             url = '{api_url}/{entity_type}/{id}/custom_attributes'.format(
-                    api_url=self.api_url,
-                    entity_type=ManageIQCustomAttributes.supported_entities[entity_type],
-                    id=entity_id)
+                api_url=self.api_url,
+                entity_type=ManageIQCustomAttributes.supported_entities[entity_type],
+                id=entity_id)
             result = self.client.post(url, action='add', resources=custom_attributes)
             self.changed = True
             return result['results']
@@ -127,9 +140,9 @@ class ManageIQCustomAttributes(object):
         """ Returns the updated custom attributes """
         try:
             url = '{api_url}/{entity_type}/{id}/custom_attributes'.format(
-                    api_url=self.api_url,
-                    entity_type=ManageIQCustomAttributes.supported_entities[entity_type],
-                    id=entity_id)
+                api_url=self.api_url,
+                entity_type=ManageIQCustomAttributes.supported_entities[entity_type],
+                id=entity_id)
             ca_object = {'name': ca['name'], 'href': ca_href, 'value': ca['value']}
             result = self.client.post(url, action='edit', resources=[ca_object])
             self.changed = True
@@ -178,9 +191,9 @@ class ManageIQCustomAttributes(object):
         """
         try:
             url = '{api_url}/{entity_type}/{id}/custom_attributes'.format(
-                    api_url=self.api_url,
-                    entity_type=ManageIQCustomAttributes.supported_entities[entity_type],
-                    id=entity_id)
+                api_url=self.api_url,
+                entity_type=ManageIQCustomAttributes.supported_entities[entity_type],
+                id=entity_id)
             ca_object = {'name': ca['name'], 'href': ca_href}
             result = self.client.post(url, action='delete', resources=[ca_object])
             self.changed = True
@@ -225,6 +238,8 @@ def main():
             miq_url=dict(default=os.environ.get('MIQ_URL', None)),
             miq_username=dict(default=os.environ.get('MIQ_USERNAME', None)),
             miq_password=dict(default=os.environ.get('MIQ_PASSWORD', None)),
+            verify_ssl=dict(require=False, type='bool', default=True),
+            ca_bundle_path=dict(required=False, type='str', defualt=None),
         )
     )
 
@@ -239,8 +254,10 @@ def main():
     entity_type       = module.params['entity_type']
     state             = module.params['state']
     custom_attributes = module.params['custom_attributes']
+    verify_ssl        = module.params['verify_ssl']
+    ca_bundle_path    = module.params['ca_bundle_path']
 
-    manageiq = ManageIQCustomAttributes(module, miq_url, miq_username, miq_password)
+    manageiq = ManageIQCustomAttributes(module, miq_url, miq_username, miq_password, verify_ssl, ca_bundle_path)
     if state == 'present':
         res_args = manageiq.add_or_update_custom_attributes(entity_type, entity_name,
                                                             custom_attributes)
