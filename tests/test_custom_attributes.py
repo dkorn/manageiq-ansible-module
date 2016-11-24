@@ -87,14 +87,14 @@ class AnsibleModuleFailed(Exception):
 
 @pytest.fixture()
 def miq(miq_api_class, miq_ansible_module, the_provider):
-    # miq_ansible_module.params = {'metrics': True}
 
     def fail(msg):
         raise AnsibleModuleFailed(msg)
 
     miq_ansible_module.fail_json = fail
     miq = manageiq_custom_attributes.ManageIQCustomAttributes(
-        miq_ansible_module, MANAGEIQ_HOSTNAME, "The username", "The password")
+        miq_ansible_module, MANAGEIQ_HOSTNAME, "The username", "The password",
+        verify_ssl=False, ca_bundle_path=None)
 
     miq_api_class.return_value.collections.providers = [the_provider]
 

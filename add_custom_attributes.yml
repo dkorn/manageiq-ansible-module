@@ -15,6 +15,7 @@
       miq_url: 'https://miq.example.com'
       miq_username: 'dkorn'
       miq_password: '******'
+      verify_ssl: False
     register: result
 
   - debug: var=result
