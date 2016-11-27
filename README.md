@@ -34,6 +34,21 @@ To delete a provider change `state=absent`.
 After addition or update, the authentication validation is verified for the provider.
 
 
+### manageiq_user module
+
+The `manageiq_user` module supports adding, updating and deleting users in manageiq.
+Example playbook `create_user.yml` is provided.
+
+Usage:
+
+    `$ ansible-playbook create_user.yml`
+
+
+To update an existing user pass the changed values together with the required parameters.
+
+To delete a user change `state=absent`.
+
+
 ### manageiq_policy_assignment module
 
 The `manageiq_policy_assignment` module currently supports assigning and unassigning Policies and Policy Profiles on resources in manageiq.

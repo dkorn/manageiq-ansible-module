@@ -1,0 +1,18 @@
+---
+- hosts: localhost
+
+  tasks:
+  - name: Create a user in ManageIQ
+    manageiq_user:
+      fullname: 'Daniel Korn'
+      name: 'dkorn'
+      password: '******'
+      group: 'EvmGroup-user'
+      state: 'present'
+      miq_url: 'http://miq.example.com'
+      miq_username: 'admin'
+      miq_password: '******'
+      verify_ssl: False
+    register: result
+
+  - debug: var=result
