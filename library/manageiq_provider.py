@@ -180,7 +180,7 @@ class ManageIQ(object):
         try:
             result = self.client.get('{providers_url}/{id}/?attributes=authentications,endpoints'.format(providers_url=self.providers_url, id=provider_id))
         except Exception as e:
-            self.module.fail_json(msg="Failed to get provider data. Error: %s" % e)
+            self.module.fail_json(msg="Failed to get provider data. Error: {!r}".format(e))
 
         def host_port(endpoint):
             return {'hostname': endpoint.get('hostname'), 'port': endpoint.get('port')}
@@ -215,7 +215,7 @@ class ManageIQ(object):
                              provider_region=provider_region)
             self.changed = True
         except Exception as e:
-            self.module.fail_json(msg="Failed to update provider. Error: %s" % e)
+            self.module.fail_json(msg="Failed to update provider. Error: {!r}".format(e))
 
     def add_new_provider(self, provider_name, provider_type, endpoints, zone_id, provider_region):
         """ Adds a provider to manageiq
@@ -232,7 +232,7 @@ class ManageIQ(object):
             provider_id = result['results'][0]['id']
             self.changed = True
         except Exception as e:
-            self.module.fail_json(msg="Failed to add provider. Error: %s" % e)
+            self.module.fail_json(msg="Failed to add provider. Error: {!r}".format(e))
         return provider_id
 
     def find_zone_by_name(self, zone_name):
@@ -280,7 +280,7 @@ class ManageIQ(object):
                 else:
                     return dict(task_id=None, changed=self.changed, api_error=result, msg="Failed to delete {provider_name} provider".format(provider_name=provider_name))
             except Exception as e:
-                self.module.fail_json(msg="Failed to delete {provider_name} provider. Error: {error}".format(provider_name=provider_name, error=e))
+                self.module.fail_json(msg="Failed to delete {provider_name} provider. Error: {error!r}".format(provider_name=provider_name, error=e))
         else:
             return dict(task_id=None, changed=self.changed, msg="Provider {provider_name} doesn't exist".format(provider_name=provider_name))
 

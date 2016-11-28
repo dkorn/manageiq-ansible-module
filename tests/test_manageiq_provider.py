@@ -203,4 +203,4 @@ def test_reports_error(miq, openshift_endpoints, the_provider, miq_api_class):
     with pytest.raises(AnsibleModuleFailed) as excinfo:
         miq.add_or_update_provider(
             PROVIDER_NAME, "openshift-origin", openshift_endpoints, "default", None)
-    assert str(excinfo.value) == "Failed to get provider data. Error: foo"
+    assert str(excinfo.value) == "Failed to get provider data. Error: Exception('foo',)"
