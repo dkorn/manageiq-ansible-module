@@ -1,0 +1,20 @@
+---
+- hosts: localhost
+
+  tasks:
+  - name: Add Custom Attributes to Openshift containers provider
+    manageiq_custom_attributes:
+      entity_type: 'provider'
+      entity_name: 'vm-48-13'
+      state: 'absent'
+      custom_attributes:
+        -  name: 'http_proxy'
+           value: 'my_http_proxyi4'
+           #section: 'cluster_settings3'
+      miq_url: 'http://localhost:3000'
+      miq_username: 'admin'
+      miq_password: 'smartvm'
+      verify_ssl: False
+    register: result
+
+  - debug: var=result

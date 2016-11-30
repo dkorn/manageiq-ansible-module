@@ -15,6 +15,8 @@ PROVIDER_ID = 266
 EXISTING_CA = {"id": 6226, "name": "ca1", "value": "value 1"}
 NEW_CA = {"id": 6227, "name": "ca2", "value": "value 2"}
 UPDATED_CA_VALUE = "new value"
+DEFAULT_SECTION = "metadata"
+DIFFERENT_SECTION = 'section'
 
 
 GET_RETURN_VALUES = {
@@ -23,7 +25,7 @@ GET_RETURN_VALUES = {
         "custom_attributes": [{
             "href": "{miq_hostname}/api/providers/{provider_id}/custom_attributes/{ca_id}".format(miq_hostname=MANAGEIQ_HOSTNAME, provider_id=PROVIDER_ID, ca_id=EXISTING_CA['id']),
             "id": EXISTING_CA['id'],
-            "section": "metadata",
+            "section": DEFAULT_SECTION,
             "name": EXISTING_CA['name'],
             "value": EXISTING_CA['value'],
             "resource_type": "ExtManagementSystem",
@@ -37,7 +39,7 @@ POST_RETURN_VALUES = {
     'added_ca': {
         'results': [{
             "resource_id": PROVIDER_ID,
-            "section": "metadata",
+            "section": DEFAULT_SECTION,
             "name": NEW_CA['name'],
             "id": NEW_CA['id'],
             "serialized_value": NEW_CA['value'],
@@ -46,10 +48,22 @@ POST_RETURN_VALUES = {
             "source": "EVM"
         }]
     },
+    'added_ca_with_section': {
+        'results': [{
+            "resource_id": PROVIDER_ID,
+            "section": DIFFERENT_SECTION,
+            "name": NEW_CA['name'],
+            "id": NEW_CA['id'],
+            "serialized_value": UPDATED_CA_VALUE,
+            "value": UPDATED_CA_VALUE,
+            "resource_type": "ExtManagementSystem",
+            "source": "EVM"
+        }]
+    },
     'updated_ca': {
         'results': [{
             "resource_id": PROVIDER_ID,
-            "section": "metadata",
+            "section": DEFAULT_SECTION,
             "name": EXISTING_CA['name'],
             "id": EXISTING_CA['id'],
             "serialized_value": UPDATED_CA_VALUE,
@@ -111,7 +125,7 @@ def test_add_custom_attributes_if_none_exist(miq, miq_api_class):
     miq_api_class.return_value.get.return_value = GET_RETURN_VALUES['no_cas']
     miq_api_class.return_value.post.return_value = POST_RETURN_VALUES['added_ca']
 
-    new_ca = [{'name': NEW_CA['name'], 'value': NEW_CA['value']}]
+    new_ca = [{'name': NEW_CA['name'], 'value': NEW_CA['value'], 'section': DEFAULT_SECTION}]
     result = miq.add_or_update_custom_attributes('provider', PROVIDER_NAME, new_ca)
     assert result == {
         'changed': True,
@@ -127,7 +141,7 @@ def test_update_existing_custom_attribute(miq, miq_api_class):
     miq_api_class.return_value.get.return_value = GET_RETURN_VALUES['ca_exist']
     miq_api_class.return_value.post.return_value = POST_RETURN_VALUES['updated_ca']
 
-    updated_ca = [{'name': EXISTING_CA['name'], 'value': UPDATED_CA_VALUE}]
+    updated_ca = [{'name': EXISTING_CA['name'], 'value': UPDATED_CA_VALUE, 'section': DEFAULT_SECTION}]
     result = miq.add_or_update_custom_attributes('provider', PROVIDER_NAME, updated_ca)
     assert result == {
         'changed': True,
@@ -135,6 +149,27 @@ def test_update_existing_custom_attribute(miq, miq_api_class):
         'updates': {
             'Added': [],
             'Updated': POST_RETURN_VALUES['updated_ca']['results']
+        }
+    }
+
+
+def test_compare_custom_attribute_with_section(miq, miq_api_class):
+    """
+    This test makes sure that if a custom attribute with the same name but
+    different section to an existing custom attribute is to be present then
+    it will be added and not update the existing custom attribute.
+    """
+    miq_api_class.return_value.get.return_value = GET_RETURN_VALUES['ca_exist']
+    miq_api_class.return_value.post.return_value = POST_RETURN_VALUES['added_ca_with_section']
+
+    updated_ca = [{'name': EXISTING_CA['name'], 'value': UPDATED_CA_VALUE, 'section': DIFFERENT_SECTION}]
+    result = miq.add_or_update_custom_attributes('provider', PROVIDER_NAME, updated_ca)
+    assert result == {
+        'changed': True,
+        'msg': "Successfully set the custom attributes to {entity_name} {entity_type}".format(entity_name=PROVIDER_NAME, entity_type='provider'),
+        'updates': {
+            'Added': POST_RETURN_VALUES['added_ca_with_section']['results'],
+            'Updated': [],
         }
     }
 
