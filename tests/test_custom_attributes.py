@@ -4,7 +4,7 @@ from mock import Mock
 
 from ansible.module_utils.basic import AnsibleModule
 
-from miqclient.api import API
+from manageiq_client.api import ManageIQClient
 import manageiq_custom_attributes
 
 
@@ -63,7 +63,7 @@ POST_RETURN_VALUES = {
 
 @pytest.fixture(autouse=True)
 def miq_api_class(monkeypatch):
-    miq_api_class = Mock(spec=API)
+    miq_api_class = Mock(spec=ManageIQClient)
     monkeypatch.setattr("manageiq_custom_attributes.MiqApi", miq_api_class)
     yield miq_api_class
 
