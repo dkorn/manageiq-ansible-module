@@ -9,9 +9,9 @@ Ansible modules which provide different ManageIQ operations.
 
 ## Prerequisites
 
-ManageIQ Python API Client package [manageiq-api-client-python] (https://github.com/ManageIQ/manageiq-api-client-python/).
+ManageIQ Python API Client package [manageiq-client] (https://github.com/ManageIQ/manageiq-api-client-python/).
 
-    `$ pip install git+https://github.com/ManageIQ/manageiq-api-client-python.git`
+    `$ pip install manageiq-client`
 
 
 

@@ -82,7 +82,7 @@ EXAMPLES = '''
 '''
 
 import os
-from miqclient.api import API as MiqApi
+from manageiq_client.api import ManageIQClient as MiqApi
 
 
 class ManageIQUser(object):

@@ -2,7 +2,7 @@
 
 import os
 from ansible.module_utils.basic import *
-from miqclient.api import API as MiqApi
+from manageiq_client.api import ManageIQClient as MiqApi
 
 
 DOCUMENTATION = '''
