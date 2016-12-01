@@ -1,0 +1,3 @@
+[submodule "example_miq_with_openshift/openshift-ansible"]
+	path = example_miq_with_openshift/openshift-ansible
+	url = https://github.com/openshift/openshift-ansible
