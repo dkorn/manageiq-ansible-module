@@ -12,8 +12,8 @@ MANAGEIQ_HOSTNAME = "http://miq.example.com"
 PROVIDER_NAME = "openshift01"
 PROVIDER_HOSTNAME = "os01.example.com"
 PROVIDER_ID = 266
-EXISTING_CA = {"id": 6226, "name": "ca1", "value": "value 1"}
-NEW_CA = {"id": 6227, "name": "ca2", "value": "value 2"}
+EXISTING_CA = {"id": 1, "name": "ca1", "value": "value 1"}
+NEW_CA = {"id": 2, "name": "ca2", "value": "value 2"}
 UPDATED_CA_VALUE = "new value"
 
 
@@ -61,9 +61,38 @@ POST_RETURN_VALUES = {
 }
 
 
+class MiqAPIMock(Mock):
+    def __init__(self, *args, **kwargs):
+        super(MiqAPIMock, self).__init__(*args, **kwargs)
+        self.next_id = 1
+
+    def get_new_id(self, action):
+        if action != 'edit':
+            self.next_id = self.next_id + 1
+        return self.next_id
+
+    def post(self, url, action, resources):
+        """
+        Mock the post function to mirror the given resources
+        """
+        posted_cas = []
+        for ca in resources:
+            posted_cas.append({
+                "resource_id": PROVIDER_ID,
+                "section": ca['section'] if 'section' in ca else "metadata",
+                "name": ca['name'],
+                "id": self.get_new_id(action),
+                "serialized_value": ca['value'],
+                "value": ca['value'],
+                "resource_type": "ExtManagementSystem",
+                "source": "EVM"
+                })
+        return {'results': posted_cas}
+
+
 @pytest.fixture(autouse=True)
 def miq_api_class(monkeypatch):
-    miq_api_class = Mock(spec=API)
+    miq_api_class = MiqAPIMock(spec=API)
     monkeypatch.setattr("manageiq_custom_attributes.MiqApi", miq_api_class)
     yield miq_api_class
 
@@ -109,7 +138,6 @@ def test_get_entity_custom_attributes(miq, miq_api_class):
 
 def test_add_custom_attributes_if_none_exist(miq, miq_api_class):
     miq_api_class.return_value.get.return_value = GET_RETURN_VALUES['no_cas']
-    miq_api_class.return_value.post.return_value = POST_RETURN_VALUES['added_ca']
 
     new_ca = [{'name': NEW_CA['name'], 'value': NEW_CA['value']}]
     result = miq.add_or_update_custom_attributes('provider', PROVIDER_NAME, new_ca)
@@ -125,7 +153,6 @@ def test_add_custom_attributes_if_none_exist(miq, miq_api_class):
 
 def test_update_existing_custom_attribute(miq, miq_api_class):
     miq_api_class.return_value.get.return_value = GET_RETURN_VALUES['ca_exist']
-    miq_api_class.return_value.post.return_value = POST_RETURN_VALUES['updated_ca']
 
     updated_ca = [{'name': EXISTING_CA['name'], 'value': UPDATED_CA_VALUE}]
     result = miq.add_or_update_custom_attributes('provider', PROVIDER_NAME, updated_ca)
@@ -141,7 +168,6 @@ def test_update_existing_custom_attribute(miq, miq_api_class):
 
 def delete_existing_custom_attribute(miq, miq_api_class):
     miq_api_class.return_value.get.return_value = GET_RETURN_VALUES['ca_exist']
-    miq_api_class.return_value.post.return_value = POST_RETURN_VALUES['added_ca']
 
     deleted_ca = [{'name': EXISTING_CA['name'], 'value': EXISTING_CA['value']}]
     result = miq.delete_custom_attributes('provider', PROVIDER_NAME, deleted_ca)
