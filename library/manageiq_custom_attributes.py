@@ -150,6 +150,10 @@ class ManageIQCustomAttributes(object):
         except Exception as e:
             self.module.fail_json(msg="Failed to update the custom attribute {ca_name}. Error: {error}".format(ca_name=ca['name'], error=e))
 
+    @staticmethod
+    def compare_custom_attributes(ca1, ca2):
+        return (ca1['name'], ca1['section']) == (ca2['name'], ca2['section'])
+
     def add_or_update_custom_attributes(self, entity_type, entity_name, custom_attributes):
         """ Adds custom attributes to an entity in manageiq or updates the
         attributes in case already exists
@@ -168,7 +172,8 @@ class ManageIQCustomAttributes(object):
 
         entity_cas = self.get_entity_custom_attributes(entity_type, entity_id)
         for new_ca in custom_attributes:
-            existing_ca = next((ca for ca in entity_cas if ca['name'] == new_ca['name']), None)
+            existing_ca = next((ca for ca in entity_cas if
+                self.compare_custom_attributes(ca, new_ca)), None)
             if existing_ca:
                 if new_ca['value'] != existing_ca['value']:
                     updated.extend(self.update_custom_attribute(entity_type, entity_id, new_ca, existing_ca['href']))
@@ -216,7 +221,8 @@ class ManageIQCustomAttributes(object):
 
         entity_cas = self.get_entity_custom_attributes(entity_type, entity_id)
         for new_ca in custom_attributes:
-            ca_href = next((ca['href'] for ca in entity_cas if ca['name'] == new_ca['name']), None)
+            ca_href = next((ca['href'] for ca in entity_cas if
+                self.compare_custom_attributes(ca, new_ca)), None)
             if ca_href:
                 deleted.extend(self.delete_custom_attribute(new_ca, ca_href, entity_type, entity_id))
 
@@ -256,6 +262,10 @@ def main():
     custom_attributes = module.params['custom_attributes']
     verify_ssl        = module.params['verify_ssl']
     ca_bundle_path    = module.params['ca_bundle_path']
+
+    for ca in custom_attributes:
+        if 'section' not in ca:
+            ca['section'] = 'metadata'
 
     manageiq = ManageIQCustomAttributes(module, miq_url, miq_username, miq_password, verify_ssl, ca_bundle_path)
     if state == 'present':
