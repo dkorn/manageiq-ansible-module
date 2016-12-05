@@ -23,6 +23,7 @@ To try the modules copy and edit the relevant example playbook and execute:
     $ ansible-playbook EDITED_PLAYBOOK.yml
    
 
+
 ## The Modules
 
 ### manageiq_provider module
@@ -38,7 +39,7 @@ The `manageiq_user` module supports adding, updating and deleting users in manag
 Example playbook [create_user.yml](create_user.yml) is provided.  
 To update an existing user pass the changed values together with the required parameters. To delete a user change `state=absent`.
 
-### manageiq_policy_assignment modulefsdsdf
+### manageiq_policy_assignment module
 
 The `manageiq_policy_assignment` module currently supports assigning and unassigning Policies and Policy Profiles on resources in manageiq.  
 An example playbook [assign_policy.yml](assign_policy.yml) is provided.  
@@ -52,6 +53,7 @@ An example playbook [add_custom_attributes.yml](add_custom_attributes.yml) is pr
 To delete a custom attributes change `state=absent`.
 
 
+
 ## Using Environment Variables
 
 It is possible to set the following environment variables, and remove them from playbook options.
@@ -60,6 +62,7 @@ It is possible to set the following environment variables, and remove them from 
     $ export MIQ_USERNAME=admin
     $ export MIQ_PASSWORD=******
     
+
 
 ## SSL Cert Verification
 
