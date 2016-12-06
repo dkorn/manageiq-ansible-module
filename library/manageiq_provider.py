@@ -253,13 +253,19 @@ class ManageIQ(object):
         providers = self.client.collections.providers
         return next((p.id for p in providers if p.name == provider_name), None)
 
-    def generate_endpoint(self, role, authtype, hostname=None, port=None, token=None, userid=None, password=None):
-        """ Returns one provider endpoint hash.
+    def generate_openshift_endpoint(self, role, authtype, hostname, port, token):
+        """ Returns an openshift provider endpoint dictionary.
         """
         return {'endpoint': {'role': role, 'hostname': hostname,
-                             'port': port and int(port)},
-                'authentication': {'authtype': authtype, 'auth_key': token,
-                                   'userid': userid, 'password': password}}
+                             'port': int(port)},
+                'authentication': {'authtype': authtype, 'auth_key': token}}
+
+    def generate_amazon_endpoint(self, role, authtype, userid, password):
+        """ Returns an amazon provider endpoint dictionary.
+        """
+        return {'endpoint': {'role': role},
+                'authentication': {'authtype': authtype, 'userid': userid,
+                                   'password': password}}
 
     def delete_provider(self, provider_name):
         """ Deletes the provider
@@ -380,11 +386,11 @@ def main():
 
     if state == 'present':
         if provider_type in ("openshift-enterprise", "openshift-origin"):
-            endpoints = [manageiq.generate_endpoint('default', 'bearer', hostname, port, token)]
+            endpoints = [manageiq.generate_openshift_endpoint('default', 'bearer', hostname, port, token)]
             if module.params['metrics']:
-                endpoints += [manageiq.generate_endpoint('hawkular', 'hawkular', h_hostname, h_port, token)]
+                endpoints.append(manageiq.generate_openshift_endpoint('hawkular', 'hawkular', h_hostname, h_port, token))
         elif provider_type == "amazon":
-            endpoints = [manageiq.generate_endpoint('default', 'default', userid=access_key_id, password=secret_access_key)]
+            endpoints = [manageiq.generate_amazon_endpoint('default', 'default', access_key_id, secret_access_key)]
 
         res_args = manageiq.add_or_update_provider(provider_name,
                                                    provider_type,

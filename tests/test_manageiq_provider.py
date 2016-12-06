@@ -60,17 +60,17 @@ def miq_ansible_module():
 @pytest.fixture
 def openshift_endpoints(miq):
     yield [
-        miq.generate_endpoint("default", "bearer", PROVIDER_HOSTNAME,
-                              PROVIDER_PORT, PROVIDER_TOKEN),
-        miq.generate_endpoint("hawkular", "hawkular", HAWKULAR_HOSTNAME,
-                              HAWKULAR_PORT, PROVIDER_TOKEN)]
+        miq.generate_openshift_endpoint("default", "bearer", PROVIDER_HOSTNAME,
+                                        PROVIDER_PORT, PROVIDER_TOKEN),
+        miq.generate_openshift_endpoint("hawkular", "hawkular", HAWKULAR_HOSTNAME,
+                                        HAWKULAR_PORT, PROVIDER_TOKEN)]
 
 
 @pytest.fixture
 def amazon_endpoints(miq):
     yield [
-        miq.generate_endpoint("default", "default", userid=AMAZON_USERID,
-                              password=AMAZON_PASSWORD)]
+        miq.generate_amazon_endpoint("default", "default", userid=AMAZON_USERID,
+                                     password=AMAZON_PASSWORD)]
 
 
 
@@ -110,12 +110,13 @@ def miq(miq_api_class, miq_ansible_module, the_provider, the_amazon_provider, th
     yield miq
 
 
-def test_generate_endpoint(miq):
-    endpoint = miq.generate_endpoint("default", "bearer", PROVIDER_HOSTNAME,
-                                     PROVIDER_PORT, PROVIDER_TOKEN)
+def test_generate_openshift_endpoint(miq):
+    endpoint = miq.generate_openshift_endpoint("default", "bearer",
+                                               PROVIDER_HOSTNAME,
+                                               PROVIDER_PORT,
+                                               PROVIDER_TOKEN)
     assert endpoint == {'authentication': {'auth_key': PROVIDER_TOKEN,
-                                           'authtype': 'bearer',
-                                           'userid': None, 'password': None},
+                                           'authtype': 'bearer'},
                         'endpoint': {'hostname': PROVIDER_HOSTNAME,
                                      'port': PROVIDER_PORT,
                                      'role': 'default'}}
@@ -137,13 +138,11 @@ def test_will_add_provider_if_none_present(miq, openshift_endpoints):
                           'role': 'default',
                           'hostname': PROVIDER_HOSTNAME},
              'authentication': {'auth_key': PROVIDER_TOKEN,
-                                'authtype': 'bearer',
-                                'userid': None, 'password': None}},
+                                'authtype': 'bearer'}},
             {'endpoint': {'port': HAWKULAR_PORT, 'role': 'hawkular',
                           'hostname': HAWKULAR_HOSTNAME},
              'authentication': {'auth_key': PROVIDER_TOKEN,
-                                'authtype': 'hawkular',
-                                'userid': None, 'password': None}}],
+                                'authtype': 'hawkular'}}],
         name=PROVIDER_NAME,
         type='ManageIQ::Providers::Openshift::ContainerManager',
         zone={'id': 1},
@@ -160,6 +159,17 @@ def test_will_add_amazon_provider_if_none_present(miq, amazon_endpoints):
         "msg": "Successfuly added {} provider".format(AMAZON_PROVIDER_NAME),
         "provider_id": PROVIDER_ID
         }
+    miq.client.post.assert_called_once_with(
+        '{}/api/providers'.format(MANAGEIQ_HOSTNAME),
+        connection_configurations=[
+            {'endpoint': {'role': 'default'},
+             'authentication': {'userid': AMAZON_USERID,
+                                'password': AMAZON_PASSWORD,
+                                'authtype': 'default'}}],
+        name=AMAZON_PROVIDER_NAME,
+        type='ManageIQ::Providers::Amazon::CloudManager',
+        zone={'id': 1},
+        provider_region=AMAZON_PROVIDER_REGION)
 
 
 def test_will_update_provider_if_present(miq, openshift_endpoints, the_provider):
