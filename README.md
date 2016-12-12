@@ -31,7 +31,8 @@ To try the modules copy and edit the relevant example playbook and execute:
 The `manageiq_provider` module currently supports adding, updating and deleting an OpenShift and Amazon EC2 providers to manageiq.  
 Example playbooks [add_openshift_provider.yml](add_openshift_provider.yml) and [add_amazon_provider.yml](add_amazon_provider.yml) are provided.
 To update an existing provider pass the changed values together with the required parameters. To delete a provider change `state=absent`.  
-After addition or update, the authentication validation is not verified for the provider at the moment.
+After addition or update, each endpoint authentication is validated, a process which can take up to 50 seconds before timeout.
+
 
 ### manageiq_user module
 

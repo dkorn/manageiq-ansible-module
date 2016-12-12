@@ -152,14 +152,13 @@ class ManageIQ(object):
 
     OPENSHIFT_DEFAULT_PORT = '8443'
 
-    provider_types = {
+    PROVIDER_TYPES = {
         'openshift-origin': 'ManageIQ::Providers::Openshift::ContainerManager',
         'openshift-enterprise': 'ManageIQ::Providers::OpenshiftEnterprise::ContainerManager',
         'amazon': 'ManageIQ::Providers::Amazon::CloudManager'}
 
-    time_format = '%Y-%m-%dT%H:%M:%SZ'
-    wait_time = 2
-    iterations = 5
+    WAIT_TIME = 5
+    ITERATIONS = 10
 
     def __init__(self, module, url, user, password, verify_ssl, ca_bundle_path):
         self.module        = module
@@ -170,27 +169,47 @@ class ManageIQ(object):
         self.changed       = False
         self.providers_url = self.api_url + '/providers'
 
-    def verify_authenticaion_validation(self, provider_id, update_time):
-        """ Returns a (success, message) tuple:
-                success: True if authentication validation passed, False otherwise
-                message: 'All Valid' if passed, authentication details otherwise
-        """
+    def auths_validation_details(self, provider_id):
         try:
-            epoch_update_time = int(time.mktime(time.strptime(update_time, ManageIQ.time_format)))
-            for i in range(ManageIQ.iterations):
-                result = self.client.get('{providers_url}/{id}/?attributes=authentications'.format(providers_url=self.providers_url, id=provider_id))
-                auths = [{k: auth.get(k, None) for k in ('authtype', 'status', 'status_details', 'updated_on')}
-                         for auth in result['authentications']]
-                # verify that the status reflects the current authentication validation
-                if all(int(time.mktime(time.strptime(auth['updated_on'], ManageIQ.time_format))) > epoch_update_time for auth in auths):
-                    if any(auth['status'] not in ('Valid', None) for auth in auths):
-                        return False, auths
-                    if all(auth['status'] == 'Valid' for auth in auths):
-                        return True, 'All Valid'
-                time.sleep(ManageIQ.wait_time)
-            return False, auths
+            result = self.client.get('{providers_url}/{id}/?attributes=authentications'.format(providers_url=self.providers_url, id=provider_id))
+            auths = result.get('authentications', [])
+            return {auth['authtype']: auth for auth in auths}
         except Exception as e:
             self.module.fail_json(msg="Failed to get provider data. Error: %s" % e)
+
+    def verify_authenticaion_validation(self, provider_id, old_validation_details, authtypes_to_verify):
+        """ Verifies that the provider's authentication validation passed.
+        provider_id            - the provider's id manageiq
+        old_validation_details - a tuple of (last_valid_on, last_invalid_on), representing the last time
+                                 that the authentication validation occured (success or failure).
+        authtypes_to_verify    - a list of autentication types that require validation
+
+        Returns a (success, details) tuple:
+            success: True if authentication validation passed, False otherwise
+            details: 'All Valid' if passed, authentication validation details otherwise
+        """
+        for i in range(ManageIQ.ITERATIONS):
+            new_validation_details = self.auths_validation_details(provider_id)
+
+            def validated(old, new):
+                """ Returns True if the validation timestamp, valid or invalid, is different
+                from the old validation timestamp, False otherwise
+                """
+                return ((old.get('last_valid_on'), old.get('last_invalid_on')) !=
+                        (new.get('last_valid_on'), new.get('last_invalid_on')))
+
+            validations_done = all(validated(old_validation_details.get(t, {}), new_validation_details.get(t, {}))
+                                   for t in authtypes_to_verify)
+            details = {t: (new_validation_details[t].get('status', "Validation in progress"),
+                           new_validation_details[t].get('status_details', ''))
+                       for t in authtypes_to_verify}
+            if validations_done:
+                if any(new_validation_details[t]['status'] not in ('Valid', None) for t in authtypes_to_verify):
+                    return False, details
+                if all(new_validation_details[t]['status'] == 'Valid' for t in authtypes_to_verify):
+                    return True, 'All Valid'
+            time.sleep(ManageIQ.WAIT_TIME)
+        return False, details
 
     def required_updates(self, provider_id, endpoints, zone_id, provider_region):
         """ Checks whether an update is required for the provider
@@ -236,14 +255,12 @@ class ManageIQ(object):
         """ Updates the existing provider with new parameters
         """
         try:
-            update_time = time.strftime(ManageIQ.time_format, time.gmtime())
             self.client.post('{api_url}/providers/{id}'.format(api_url=self.api_url, id=provider_id),
                              action='edit',
                              zone={'id': zone_id},
                              connection_configurations=endpoints,
                              provider_region=provider_region)
             self.changed = True
-            return update_time
         except Exception as e:
             self.module.fail_json(msg="Failed to update provider. Error: {!r}".format(e))
 
@@ -251,20 +268,19 @@ class ManageIQ(object):
         """ Adds a provider to manageiq
 
         Returns:
-            the added provider id and the creation time
+            the added provider id
         """
         try:
             result = self.client.post(self.providers_url, name=provider_name,
-                                      type=ManageIQ.provider_types[provider_type],
+                                      type=ManageIQ.PROVIDER_TYPES[provider_type],
                                       zone={'id': zone_id},
                                       connection_configurations=endpoints,
                                       provider_region=provider_region)
             provider_id = result['results'][0]['id']
-            creation_time = result['results'][0]['created_on']
             self.changed = True
         except Exception as e:
             self.module.fail_json(msg="Failed to add provider. Error: {!r}".format(e))
-        return provider_id, creation_time
+        return provider_id
 
     def find_zone_by_name(self, zone_name):
         """ Searches the zone name in manageiq existing zones
@@ -327,43 +343,47 @@ class ManageIQ(object):
 
         Returns:
             the added or updated provider id, whether or not a change took
-            place and a short message describing the operation executed
+            place and a short message describing the operation executed,
+            including the authentication validation status
         """
-        message = ""
         zone_id = self.find_zone_by_name(zone or 'default')
         # check if provider with the same name already exists
         provider_id = self.find_provider_by_name(provider_name)
-        updates = {}
         if provider_id:  # provider exists
             updates = self.required_updates(provider_id, endpoints, zone_id, provider_region)
-            if updates:
-                update_time = self.update_provider(provider_id, provider_name, endpoints, zone_id, provider_region)
-                success, msg = self.verify_authenticaion_validation(provider_id, update_time)
-                if success:
-                    message = "Successfuly updated {provider} provider. Authentication: {validation}".format(provider=provider_name, validation=msg)
-                else:
-                    message = "Failed to validate provider {provider} after update. Authentication: {validation}".format(provider=provider_name, validation=msg)
-            else:
-                message = "Provider %s already exists" % provider_name
-            return dict(
-                provider_id=provider_id,
-                changed=self.changed,
-                msg=message,
-                updates=updates
-            )
+            if not updates:
+                return dict(changed=self.changed,
+                            msg="Provider %s already exists" % provider_name)
+
+            old_validation_details = self.auths_validation_details(provider_id)
+            operation = "update"
+            self.update_provider(provider_id, provider_name, endpoints, zone_id, provider_region)
+            roles_with_changes = set(updates["Added"]) | set(updates["Updated"])
         else:  # provider doesn't exists, adding it to manageiq
-            provider_id, creation_time = self.add_new_provider(provider_name, provider_type,
-                                                               endpoints, zone_id, provider_region)
-            success, msg = self.verify_authenticaion_validation(provider_id, creation_time)
-            if success:
-                message = "Successfuly added {provider} provider. Authentication: {validation}".format(provider=provider_name, validation=msg)
-            else:
-                message = "Failed to validate provider {provider} after addition. Authentication: {validation}".format(provider=provider_name, validation=msg)
-            return dict(
-                provider_id=provider_id,
-                changed=self.changed,
-                msg=message
-            )
+            updates = None
+            old_validation_details = {}
+            operation = "add"
+            provider_id = self.add_new_provider(provider_name, provider_type,
+                                                endpoints, zone_id, provider_region)
+            roles_with_changes = [e['endpoint']['role'] for e in endpoints]
+
+        authtypes_to_verify = []
+        for e in endpoints:
+            if e['endpoint']['role'] in roles_with_changes:
+                authtypes_to_verify.append(e['authentication']['authtype'])
+        success, details = self.verify_authenticaion_validation(provider_id, old_validation_details, authtypes_to_verify)
+        operations = {"add": {"past": "added", "present": "addition"},
+                      "update": {"past": "updated", "present": "update"}}
+        if success:
+            message = "Successfuly {operation} {provider} provider. Authentication: {validation}".format(operation=operations[operation]["past"], provider=provider_name, validation=details)
+        else:
+            message = "Failed to validate provider {provider} after {operation}. Authentication: {validation}".format(operation=operations[operation]["present"], provider=provider_name, validation=details)
+        return dict(
+            provider_id=provider_id,
+            changed=self.changed,
+            msg=message,
+            updates=updates
+        )
 
 
 def main():
