@@ -22,6 +22,101 @@ HAWKULAR_PORT = 443
 MANAGEIQ_HOSTNAME = "http://themanageiq.tld"
 
 
+POST_RETURN_VALUES = {
+    'openshift': {
+        'results': [{
+            'api_version': u'v1',
+            'created_on': u'2016-09-08T15:11:29Z',
+            'guid': u'84a4084a-75d6-11e6-92bc-0242ee817803',
+            'id': PROVIDER_ID,
+            'name': u'Openshift01',
+            'tenant_id': 1,
+            'type': u'ManageIQ::Providers::Openshift::ContainerManager',
+            'updated_on': u'2016-09-08T15:11:29Z',
+            'zone_id': 1
+        }]
+    },
+    'amazon': {
+        'results': [{
+            'api_version': u'v1',
+            'created_on': u'2016-09-08T15:11:29Z',
+            'guid': u'84a4084a-75d6-11e6-92bc-0242ee817803',
+            'id': PROVIDER_ID,
+            'name': u'amazon provider',
+            'tenant_id': 1,
+            'type': u'ManageIQ::Providers::Openshift::ContainerManager',
+            'updated_on': u'2016-09-08T15:11:29Z',
+            'zone_id': 1,
+            'provider_region': AMAZON_PROVIDER_REGION
+        }]
+    },
+    'updated_amazon': {
+        'results': [{
+            'api_version': u'v1',
+            'created_on': u'2016-09-08T15:11:29Z',
+            'guid': u'84a4084a-75d6-11e6-92bc-0242ee817803',
+            'id': PROVIDER_ID,
+            'name': u'amazon provider',
+            'tenant_id': 1,
+            'type': u'ManageIQ::Providers::Openshift::ContainerManager',
+            'updated_on': u'2016-09-08T16:11:29Z',
+            'zone_id': 1,
+            'provider_region': 'other region'
+        }]
+    }
+}
+
+GET_RETURN_VALUES = {
+    'openshift_without_hawkular': {
+        'zone_id': 1,
+        'endpoints': [{
+            'port': PROVIDER_PORT,
+            'role': 'default',
+            'hostname': PROVIDER_HOSTNAME
+        }],
+        'authentications': [
+            {'authtype': 'bearer',
+             'updated_on': '2020-09-22T11:58:30Z',
+             'status': 'Valid',
+             'status_details': 'Ok',
+             'last_valid_on': '2020-09-22T11:00:30Z'}]
+    },
+    'openshift_with_hawkular': {
+        'zone_id': 1,
+        'endpoints': [
+            {'port': PROVIDER_PORT,
+             'role': 'default',
+             'hostname': PROVIDER_HOSTNAME},
+            {'port': HAWKULAR_PORT,
+             'role': 'hawkular',
+             'hostname': HAWKULAR_HOSTNAME}
+        ],
+        'authentications': [
+            {'authtype': 'hawkular',
+             'updated_on': '2020-09-22T12:58:30Z',
+             'status': 'Valid',
+             'status_details': 'Ok',
+             'last_valid_on': '2020-09-22T12:59:30Z'},
+            {'authtype': 'bearer',
+             'updated_on': '2020-09-22T11:58:30Z',
+             'status': 'Valid',
+             'status_details': 'Ok',
+             'last_valid_on': '2020-09-22T11:00:30Z'}]
+    },
+    'amazon': {
+        'zone_id': 1,
+        'endpoints': [{'role': 'default'}],
+        'authentications': [
+            {'authtype': 'default',
+             'updated_on': '2020-09-22T11:58:30Z',
+             'status': 'Valid',
+             'status_details': 'Ok',
+             'last_valid_on': '2020-09-22T11:00:30Z'}
+        ]
+    }
+}
+
+
 @pytest.fixture(autouse=True)
 def miq_api_class(monkeypatch):
     miq_api_class = Mock(spec=ManageIQClient)
@@ -33,6 +128,7 @@ def miq_api_class(monkeypatch):
 def the_provider():
     the_provider = Mock()
     the_provider.name = PROVIDER_NAME
+    the_provider.id = PROVIDER_ID
     yield the_provider
 
 
@@ -40,6 +136,7 @@ def the_provider():
 def the_amazon_provider():
     the_amazon_provider = Mock()
     the_amazon_provider.name = AMAZON_PROVIDER_NAME
+    the_amazon_provider.id = PROVIDER_ID
     yield the_amazon_provider
 
 
@@ -58,16 +155,21 @@ def miq_ansible_module():
 
 
 @pytest.fixture
-def openshift_endpoints(miq):
+def openshift_endpoint(miq):
     yield [
         miq.generate_openshift_endpoint("default", "bearer", PROVIDER_HOSTNAME,
-                                        PROVIDER_PORT, PROVIDER_TOKEN),
+                                        PROVIDER_PORT, PROVIDER_TOKEN)]
+
+
+@pytest.fixture
+def hawkular_endpoint(miq):
+    yield [
         miq.generate_openshift_endpoint("hawkular", "hawkular", HAWKULAR_HOSTNAME,
                                         HAWKULAR_PORT, PROVIDER_TOKEN)]
 
 
 @pytest.fixture
-def amazon_endpoints(miq):
+def amazon_endpoint(miq):
     yield [
         miq.generate_amazon_endpoint("default", "default", userid=AMAZON_USERID,
                                      password=AMAZON_PASSWORD)]
@@ -90,29 +192,6 @@ def miq(miq_api_class, miq_ansible_module, the_provider, the_amazon_provider, th
                                      "The username", "The password",
                                      verify_ssl=False, ca_bundle_path=None)
 
-    miq_api_class.return_value.post.return_value = dict(results=[
-        {'api_version': u'v1',
-         'created_on': u'2016-09-08T15:11:29Z',
-         'guid': u'84a4084a-75d6-11e6-92bc-0242ee817803',
-         'id': PROVIDER_ID,
-         'name': u'Openshift01',
-         'tenant_id': 1,
-         'type': u'ManageIQ::Providers::Openshift::ContainerManager',
-         'updated_on': u'2016-09-08T15:11:29Z',
-         'zone_id': 1}])
-    miq_api_class.return_value.get.return_value = dict(
-        endpoints=[{'port': PROVIDER_PORT, 'role': 'default',
-                    'hostname': PROVIDER_HOSTNAME}], zone_id=1,
-        authentications=[{'authtype': 'hawkular',
-                          'updated_on': '2020-09-22T11:58:30Z',
-                          'status': 'Valid',
-                          'status_details': 'Ok'},
-                         {'authtype': 'bearer',
-                          'updated_on': '2020-09-22T11:58:30Z',
-                          'status': 'Valid',
-                          'status_details': 'Ok'}])
-    miq_api_class.return_value.collections.providers = [
-        the_provider, the_amazon_provider]
     miq_api_class.return_value.collections.zones = [the_zone]
 
     yield miq
@@ -130,15 +209,19 @@ def test_generate_openshift_endpoint(miq):
                                      'role': 'default'}}
 
 
-def test_will_add_provider_if_none_present(miq, openshift_endpoints):
-    miq.client.collections.providers = []
+def test_will_add_openshift_provider_if_none_present(miq, miq_api_class, openshift_endpoint):
+    miq_api_class.return_value.collections.providers = []
+    miq_api_class.return_value.get.return_value = GET_RETURN_VALUES['openshift_without_hawkular']
+    miq_api_class.return_value.post.return_value = POST_RETURN_VALUES['openshift']
+
     res_args = miq.add_or_update_provider(
-        PROVIDER_NAME, "openshift-origin", openshift_endpoints,
+        PROVIDER_NAME, "openshift-origin", openshift_endpoint,
         "default", None)
     assert res_args == {
         'changed': True,
-        'msg': 'Successfuly added {} provider. Authentication: All Valid'.format(PROVIDER_NAME),
-        'provider_id': PROVIDER_ID}
+        'msg': 'Successful addition of {} provider. Authentication: All Valid'.format(PROVIDER_NAME),
+        'provider_id': PROVIDER_ID,
+        'updates': None}
     miq.client.post.assert_called_once_with(
         '{}/api/providers'.format(MANAGEIQ_HOSTNAME),
         connection_configurations=[
@@ -146,26 +229,26 @@ def test_will_add_provider_if_none_present(miq, openshift_endpoints):
                           'role': 'default',
                           'hostname': PROVIDER_HOSTNAME},
              'authentication': {'auth_key': PROVIDER_TOKEN,
-                                'authtype': 'bearer'}},
-            {'endpoint': {'port': HAWKULAR_PORT, 'role': 'hawkular',
-                          'hostname': HAWKULAR_HOSTNAME},
-             'authentication': {'auth_key': PROVIDER_TOKEN,
-                                'authtype': 'hawkular'}}],
+                                'authtype': 'bearer'}}],
         name=PROVIDER_NAME,
         type='ManageIQ::Providers::Openshift::ContainerManager',
         zone={'id': 1},
         provider_region=None)
 
 
-def test_will_add_amazon_provider_if_none_present(miq, amazon_endpoints):
-    miq.client.collections.providers = []
+def test_will_add_amazon_provider_if_none_present(miq, miq_api_class, amazon_endpoint):
+    miq_api_class.return_value.collections.providers = []
+    miq_api_class.return_value.get.return_value = GET_RETURN_VALUES['amazon']
+    miq_api_class.return_value.post.return_value = POST_RETURN_VALUES['amazon']
+
     res_args = miq.add_or_update_provider(
-        AMAZON_PROVIDER_NAME, "amazon", amazon_endpoints,
+        AMAZON_PROVIDER_NAME, "amazon", amazon_endpoint,
         "default", AMAZON_PROVIDER_REGION)
     assert res_args == {
         "changed": True,
-        "msg": "Successfuly added {} provider. Authentication: All Valid".format(AMAZON_PROVIDER_NAME),
-        "provider_id": PROVIDER_ID
+        "msg": "Successful addition of {} provider. Authentication: All Valid".format(AMAZON_PROVIDER_NAME),
+        "provider_id": PROVIDER_ID,
+        'updates': None
         }
     miq.client.post.assert_called_once_with(
         '{}/api/providers'.format(MANAGEIQ_HOSTNAME),
@@ -180,45 +263,59 @@ def test_will_add_amazon_provider_if_none_present(miq, amazon_endpoints):
         provider_region=AMAZON_PROVIDER_REGION)
 
 
-def test_will_update_provider_if_present(miq, openshift_endpoints, the_provider):
+def test_will_update_openshift_provider_if_present(miq, miq_api_class, openshift_endpoint, hawkular_endpoint, the_provider):
+    miq_api_class.return_value.collections.providers = [the_provider]
+    miq_api_class.return_value.get.side_effect = [
+        GET_RETURN_VALUES['openshift_without_hawkular'],
+        GET_RETURN_VALUES['openshift_without_hawkular'],
+        GET_RETURN_VALUES['openshift_with_hawkular']
+    ]
+    miq_api_class.return_value.post.return_value = POST_RETURN_VALUES['openshift']
+
+    openshift_endpoint.extend(hawkular_endpoint)
     res_args = miq.add_or_update_provider(
-        PROVIDER_NAME, "openshift-origin", openshift_endpoints,
+        PROVIDER_NAME, "openshift-origin", openshift_endpoint,
         "default", None)
     assert res_args == {
         'changed': True,
-        'msg': 'Successfuly updated {} provider. Authentication: All Valid'.format(PROVIDER_NAME),
-        'provider_id': the_provider.id,
+        'msg': 'Successful update of {} provider. Authentication: All Valid'.format(PROVIDER_NAME),
+        'provider_id': PROVIDER_ID,
         'updates': {
-            'Added':
-            {'hawkular': {
-                'hostname': HAWKULAR_HOSTNAME,
-                'port': HAWKULAR_PORT}},
+            'Added': {
+                'hawkular': {'hostname': 'some-hawkular-hostname.tld', 'port': 443}
+            },
             'Removed': {},
             'Updated': {}
-        }}
+        }
+    }
 
 
-def test_will_update_amazon_provider_if_present(miq, amazon_endpoints, the_amazon_provider):
+def test_will_update_amazon_provider_if_present(miq, miq_api_class, amazon_endpoint, the_amazon_provider):
+    miq_api_class.return_value.collections.providers = [the_amazon_provider]
+    miq_api_class.return_value.get.return_value = GET_RETURN_VALUES['amazon']
+    miq_api_class.return_value.post.return_value = POST_RETURN_VALUES['updated_amazon']
+
     res_args = miq.add_or_update_provider(
-        AMAZON_PROVIDER_NAME, "amazon", amazon_endpoints, "default",
-        "other_region")
+        AMAZON_PROVIDER_NAME, "amazon", amazon_endpoint, "default",
+        "other region")
     assert res_args == {
         'changed': True,
-        'msg': 'Successfuly updated {} provider. Authentication: All Valid'.format(AMAZON_PROVIDER_NAME),
+        'msg': 'Successful update of {} provider. Authentication: All Valid'.format(AMAZON_PROVIDER_NAME),
         'provider_id': the_amazon_provider.id,
         'updates': {
             'Added': {},
             'Removed': {},
             'Updated': {
-                'provider_region': 'other_region',
-                'default': {'hostname': None, 'port': None}
+                'provider_region': 'other region'
             }
-        }}
+        }
+    }
 
 
-def test_reports_error(miq, openshift_endpoints, the_provider, miq_api_class):
+def test_reports_error(miq, openshift_endpoint, the_provider, miq_api_class):
+    miq_api_class.return_value.collections.providers = [the_provider]
     miq_api_class().get.side_effect = Exception("foo")
     with pytest.raises(AnsibleModuleFailed) as excinfo:
         miq.add_or_update_provider(
-            PROVIDER_NAME, "openshift-origin", openshift_endpoints, "default", None)
+            PROVIDER_NAME, "openshift-origin", openshift_endpoint, "default", None)
     assert str(excinfo.value) == "Failed to get provider data. Error: Exception('foo',)"

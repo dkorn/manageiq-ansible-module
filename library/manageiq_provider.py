@@ -362,7 +362,7 @@ class ManageIQ(object):
         else:  # provider doesn't exists, adding it to manageiq
             updates = None
             old_validation_details = {}
-            operation = "add"
+            operation = "addition"
             provider_id = self.add_new_provider(provider_name, provider_type,
                                                 endpoints, zone_id, provider_region)
             roles_with_changes = [e['endpoint']['role'] for e in endpoints]
@@ -372,12 +372,11 @@ class ManageIQ(object):
             if e['endpoint']['role'] in roles_with_changes:
                 authtypes_to_verify.append(e['authentication']['authtype'])
         success, details = self.verify_authenticaion_validation(provider_id, old_validation_details, authtypes_to_verify)
-        operations = {"add": {"past": "added", "present": "addition"},
-                      "update": {"past": "updated", "present": "update"}}
+
         if success:
-            message = "Successfuly {operation} {provider} provider. Authentication: {validation}".format(operation=operations[operation]["past"], provider=provider_name, validation=details)
+            message = "Successful {operation} of {provider} provider. Authentication: {validation}".format(operation=operation, provider=provider_name, validation=details)
         else:
-            message = "Failed to validate provider {provider} after {operation}. Authentication: {validation}".format(operation=operations[operation]["present"], provider=provider_name, validation=details)
+            message = "Failed to validate provider {provider} after {operation}. Authentication: {validation}".format(operation=operation, provider=provider_name, validation=details)
         return dict(
             provider_id=provider_id,
             changed=self.changed,
