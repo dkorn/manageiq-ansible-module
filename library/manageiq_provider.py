@@ -251,6 +251,16 @@ class ManageIQ(object):
             updated['provider_region'] = provider_region
         return {"Updated": updated, "Added": added, "Removed": removed}
 
+    def refresh_provider(self, provider_id):
+        """ Performs a refresh of provider's inventory
+        """
+        try:
+            self.client.post('{api_url}/providers/{id}'.format(api_url=self.api_url, id=provider_id),
+                             action='refresh')
+            self.changed = True
+        except Exception as e:
+            self.module.fail_json(msg="Failed to refresh provider. Error: {!r}".format(e))
+
     def update_provider(self, provider_id, provider_name, endpoints, zone_id, provider_region):
         """ Updates the existing provider with new parameters
         """
@@ -374,7 +384,8 @@ class ManageIQ(object):
         success, details = self.verify_authenticaion_validation(provider_id, old_validation_details, authtypes_to_verify)
 
         if success:
-            message = "Successful {operation} of {provider} provider. Authentication: {validation}".format(operation=operation, provider=provider_name, validation=details)
+            self.refresh_provider(provider_id)
+            message = "Successful {operation} of {provider} provider. Authentication: {validation}. Refreshing provider inventory".format(operation=operation, provider=provider_name, validation=details)
         else:
             message = "Failed to validate provider {provider} after {operation}. Authentication: {validation}".format(operation=operation, provider=provider_name, validation=details)
         return dict(

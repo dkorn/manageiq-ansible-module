@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import pytest
-from mock import Mock
+from mock import Mock, call
 
 from ansible.module_utils.basic import AnsibleModule
 
@@ -219,21 +219,23 @@ def test_will_add_openshift_provider_if_none_present(miq, miq_api_class, openshi
         "default", None)
     assert res_args == {
         'changed': True,
-        'msg': 'Successful addition of {} provider. Authentication: All Valid'.format(PROVIDER_NAME),
+        'msg': 'Successful addition of {} provider. Authentication: All Valid. Refreshing provider inventory'.format(PROVIDER_NAME),
         'provider_id': PROVIDER_ID,
         'updates': None}
-    miq.client.post.assert_called_once_with(
-        '{}/api/providers'.format(MANAGEIQ_HOSTNAME),
-        connection_configurations=[
-            {'endpoint': {'port': PROVIDER_PORT,
-                          'role': 'default',
-                          'hostname': PROVIDER_HOSTNAME},
-             'authentication': {'auth_key': PROVIDER_TOKEN,
-                                'authtype': 'bearer'}}],
-        name=PROVIDER_NAME,
-        type='ManageIQ::Providers::Openshift::ContainerManager',
-        zone={'id': 1},
-        provider_region=None)
+    calls = [call('{}/api/providers'.format(MANAGEIQ_HOSTNAME),
+                  connection_configurations=[
+                      {'endpoint': {'port': PROVIDER_PORT,
+                                    'role': 'default',
+                                    'hostname': PROVIDER_HOSTNAME},
+                       'authentication': {'auth_key': PROVIDER_TOKEN,
+                                          'authtype': 'bearer'}}],
+                  name=PROVIDER_NAME,
+                  type='ManageIQ::Providers::Openshift::ContainerManager',
+                  zone={'id': 1},
+                  provider_region=None),
+             call('{}/api/providers/{}'.format(MANAGEIQ_HOSTNAME, PROVIDER_ID),
+                  action='refresh')]
+    miq.client.post.assert_has_calls(calls)
 
 
 def test_will_add_amazon_provider_if_none_present(miq, miq_api_class, amazon_endpoint):
@@ -246,21 +248,23 @@ def test_will_add_amazon_provider_if_none_present(miq, miq_api_class, amazon_end
         "default", AMAZON_PROVIDER_REGION)
     assert res_args == {
         "changed": True,
-        "msg": "Successful addition of {} provider. Authentication: All Valid".format(AMAZON_PROVIDER_NAME),
+        "msg": "Successful addition of {} provider. Authentication: All Valid. Refreshing provider inventory".format(AMAZON_PROVIDER_NAME),
         "provider_id": PROVIDER_ID,
         'updates': None
         }
-    miq.client.post.assert_called_once_with(
-        '{}/api/providers'.format(MANAGEIQ_HOSTNAME),
-        connection_configurations=[
-            {'endpoint': {'role': 'default'},
-             'authentication': {'userid': AMAZON_USERID,
-                                'password': AMAZON_PASSWORD,
-                                'authtype': 'default'}}],
-        name=AMAZON_PROVIDER_NAME,
-        type='ManageIQ::Providers::Amazon::CloudManager',
-        zone={'id': 1},
-        provider_region=AMAZON_PROVIDER_REGION)
+    calls = [call('{}/api/providers'.format(MANAGEIQ_HOSTNAME),
+                  connection_configurations=[
+                      {'endpoint': {'role': 'default'},
+                       'authentication': {'userid': AMAZON_USERID,
+                                          'password': AMAZON_PASSWORD,
+                                          'authtype': 'default'}}],
+                  name=AMAZON_PROVIDER_NAME,
+                  type='ManageIQ::Providers::Amazon::CloudManager',
+                  zone={'id': 1},
+                  provider_region=AMAZON_PROVIDER_REGION),
+             call('{}/api/providers/{}'.format(MANAGEIQ_HOSTNAME, PROVIDER_ID),
+                  action='refresh')]
+    miq.client.post.assert_has_calls(calls)
 
 
 def test_will_update_openshift_provider_if_present(miq, miq_api_class, openshift_endpoint, hawkular_endpoint, the_provider):
@@ -278,7 +282,7 @@ def test_will_update_openshift_provider_if_present(miq, miq_api_class, openshift
         "default", None)
     assert res_args == {
         'changed': True,
-        'msg': 'Successful update of {} provider. Authentication: All Valid'.format(PROVIDER_NAME),
+        'msg': 'Successful update of {} provider. Authentication: All Valid. Refreshing provider inventory'.format(PROVIDER_NAME),
         'provider_id': PROVIDER_ID,
         'updates': {
             'Added': {
@@ -300,7 +304,7 @@ def test_will_update_amazon_provider_if_present(miq, miq_api_class, amazon_endpo
         "other region")
     assert res_args == {
         'changed': True,
-        'msg': 'Successful update of {} provider. Authentication: All Valid'.format(AMAZON_PROVIDER_NAME),
+        'msg': 'Successful update of {} provider. Authentication: All Valid. Refreshing provider inventory'.format(AMAZON_PROVIDER_NAME),
         'provider_id': the_amazon_provider.id,
         'updates': {
             'Added': {},
