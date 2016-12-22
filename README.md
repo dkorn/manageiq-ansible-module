@@ -50,7 +50,9 @@ To unassign a policy/policy profile on a resource change `state=absent`.
 The `manageiq_custom_attributes` module supports adding, updating and deleting custom attributes on resources in ManageIQ.
 Currently the only resources (entities) that supports custom attributes are vms and providers.  
 An example playbook [add_custom_attributes.yml](add_custom_attributes.yml) is provided.  
-To delete a custom attributes change `state=absent`.
+To delete a custom attributes change `state=absent`.  
+It is possible to add a date type custom attributes by specifying `field_type: "Date"` and passing it in the following fromat:
+`yyyy-mm-dd`
 
 
 

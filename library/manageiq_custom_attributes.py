@@ -172,8 +172,7 @@ class ManageIQCustomAttributes(object):
 
         entity_cas = self.get_entity_custom_attributes(entity_type, entity_id)
         for new_ca in custom_attributes:
-            existing_ca = next((ca for ca in entity_cas if
-                self.compare_custom_attributes(ca, new_ca)), None)
+            existing_ca = next((ca for ca in entity_cas if self.compare_custom_attributes(ca, new_ca)), None)
             if existing_ca:
                 if new_ca['value'] != existing_ca['value']:
                     updated.extend(self.update_custom_attribute(entity_type, entity_id, new_ca, existing_ca['href']))
@@ -221,8 +220,7 @@ class ManageIQCustomAttributes(object):
 
         entity_cas = self.get_entity_custom_attributes(entity_type, entity_id)
         for new_ca in custom_attributes:
-            ca_href = next((ca['href'] for ca in entity_cas if
-                self.compare_custom_attributes(ca, new_ca)), None)
+            ca_href = next((ca['href'] for ca in entity_cas if self.compare_custom_attributes(ca, new_ca)), None)
             if ca_href:
                 deleted.extend(self.delete_custom_attribute(new_ca, ca_href, entity_type, entity_id))
 
