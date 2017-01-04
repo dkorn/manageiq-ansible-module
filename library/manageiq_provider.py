@@ -184,32 +184,40 @@ class ManageIQ(object):
                                  that the authentication validation occured (success or failure).
         authtypes_to_verify    - a list of autentication types that require validation
 
-        Returns a (success, details) tuple:
-            success: True if authentication validation passed, False otherwise
-            details: 'All Valid' if passed, authentication validation details otherwise
+        Returns a (result, details) tuple:
+            result: 'Valid' if authentication validation passed for all endpoints, 'Invalid' if failed for any endpoint,
+                    'Timed out' if any validation didn't complete in the assigned time
+            details: Authentication validation details, 'Validation didn't complete' in case it timed out
         """
+        def validated(old, new):
+            """ Returns True if the validation timestamp, valid or invalid, is different
+            from the old validation timestamp, False otherwise
+            """
+            return ((old.get('last_valid_on'), old.get('last_invalid_on')) !=
+                    (new.get('last_valid_on'), new.get('last_invalid_on')))
+
         for i in range(ManageIQ.ITERATIONS):
             new_validation_details = self.auths_validation_details(provider_id)
 
-            def validated(old, new):
-                """ Returns True if the validation timestamp, valid or invalid, is different
-                from the old validation timestamp, False otherwise
-                """
-                return ((old.get('last_valid_on'), old.get('last_invalid_on')) !=
-                        (new.get('last_valid_on'), new.get('last_invalid_on')))
+            validations_done = True
+            all_done_valid = "Valid"  # Out of the (re)validated ones.
+            details = {}
+            for t in authtypes_to_verify:
+                old = old_validation_details.get(t, {})
+                new = new_validation_details.get(t, {})
+                if not validated(old, new):
+                    details[t] = "Validation didn't complete"
+                    validations_done = False
+                else:
+                    details[t] = (new.get('status'), new.get('status_details'))
+                    if new.get('status') != 'Valid':
+                        all_done_valid = "Invalid"
 
-            validations_done = all(validated(old_validation_details.get(t, {}), new_validation_details.get(t, {}))
-                                   for t in authtypes_to_verify)
-            details = {t: (new_validation_details[t].get('status', "Validation in progress"),
-                           new_validation_details[t].get('status_details', ''))
-                       for t in authtypes_to_verify}
             if validations_done:
-                if any(new_validation_details[t]['status'] not in ('Valid', None) for t in authtypes_to_verify):
-                    return False, details
-                if all(new_validation_details[t]['status'] == 'Valid' for t in authtypes_to_verify):
-                    return True, 'All Valid'
+                return all_done_valid, details
             time.sleep(ManageIQ.WAIT_TIME)
-        return False, details
+
+        return "Timed out", details
 
     def required_updates(self, provider_id, endpoints, zone_id, provider_region):
         """ Checks whether an update is required for the provider
@@ -381,13 +389,15 @@ class ManageIQ(object):
         for e in endpoints:
             if e['endpoint']['role'] in roles_with_changes:
                 authtypes_to_verify.append(e['authentication']['authtype'])
-        success, details = self.verify_authenticaion_validation(provider_id, old_validation_details, authtypes_to_verify)
+        result, details = self.verify_authenticaion_validation(provider_id, old_validation_details, authtypes_to_verify)
 
-        if success:
+        if result == "Invalid":
+            self.module.fail_json(msg="Failed to Validate provider authentication after {operation}. details: {details}".format(operation=operation, details=details))
+        elif result == "Valid":
             self.refresh_provider(provider_id)
             message = "Successful {operation} of {provider} provider. Authentication: {validation}. Refreshing provider inventory".format(operation=operation, provider=provider_name, validation=details)
-        else:
-            message = "Failed to validate provider {provider} after {operation}. Authentication: {validation}".format(operation=operation, provider=provider_name, validation=details)
+        elif result == "Timed out":
+            message = "Provider {provider} validation after {operation} timed out. Authentication: {validation}".format(operation=operation, provider=provider_name, validation=details)
         return dict(
             provider_id=provider_id,
             changed=self.changed,

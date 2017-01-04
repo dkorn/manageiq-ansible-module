@@ -219,7 +219,7 @@ def test_will_add_openshift_provider_if_none_present(miq, miq_api_class, openshi
         "default", None)
     assert res_args == {
         'changed': True,
-        'msg': 'Successful addition of {} provider. Authentication: All Valid. Refreshing provider inventory'.format(PROVIDER_NAME),
+        'msg': "Successful addition of {} provider. Authentication: {{'bearer': ('Valid', 'Ok')}}. Refreshing provider inventory".format(PROVIDER_NAME),
         'provider_id': PROVIDER_ID,
         'updates': None}
     calls = [call('{}/api/providers'.format(MANAGEIQ_HOSTNAME),
@@ -248,7 +248,7 @@ def test_will_add_amazon_provider_if_none_present(miq, miq_api_class, amazon_end
         "default", AMAZON_PROVIDER_REGION)
     assert res_args == {
         "changed": True,
-        "msg": "Successful addition of {} provider. Authentication: All Valid. Refreshing provider inventory".format(AMAZON_PROVIDER_NAME),
+        "msg": "Successful addition of {} provider. Authentication: {{'default': ('Valid', 'Ok')}}. Refreshing provider inventory".format(AMAZON_PROVIDER_NAME),
         "provider_id": PROVIDER_ID,
         'updates': None
         }
@@ -282,7 +282,7 @@ def test_will_update_openshift_provider_if_present(miq, miq_api_class, openshift
         "default", None)
     assert res_args == {
         'changed': True,
-        'msg': 'Successful update of {} provider. Authentication: All Valid. Refreshing provider inventory'.format(PROVIDER_NAME),
+        'msg': "Successful update of {} provider. Authentication: {{'hawkular': ('Valid', 'Ok')}}. Refreshing provider inventory".format(PROVIDER_NAME),
         'provider_id': PROVIDER_ID,
         'updates': {
             'Added': {
@@ -304,7 +304,7 @@ def test_will_update_amazon_provider_if_present(miq, miq_api_class, amazon_endpo
         "other region")
     assert res_args == {
         'changed': True,
-        'msg': 'Successful update of {} provider. Authentication: All Valid. Refreshing provider inventory'.format(AMAZON_PROVIDER_NAME),
+        'msg': 'Successful update of {} provider. Authentication: {{}}. Refreshing provider inventory'.format(AMAZON_PROVIDER_NAME),
         'provider_id': the_amazon_provider.id,
         'updates': {
             'Added': {},
