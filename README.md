@@ -2,7 +2,7 @@
 
 [![travis image][]][travis status]
 
-Ansible modules which provide different ManageIQ operations.
+Ansible modules automating various operations and use cases of ManageIQ.
 
 [travis image]: https://api.travis-ci.org/dkorn/manageiq-ansible-module.svg?branch=master
 [travis status]: https://travis-ci.org/dkorn/manageiq-ansible-module/branches
