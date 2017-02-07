@@ -1,0 +1,16 @@
+[openshift_providers]
+openshift01 type='openshift-origin' hostname='' port='' token='' metrics='True' hawkular_hostname='' hawkular_port='' custom_attributes='[{"name": "Expire Date", "value": "2017-02-28", "field_type": "Date"}, {"name": "Customer Account ID", "value": "AKIAIEY7GHEUGVHOHCAA"}, {"name": "Number of Expected Nodes", "value": "2"}, {"name": "Cluster ID", "value": "ba83b725-089d"}, {"name": "Customer Name", "value": "Russell Westbrook"}]'
+openshift02 type='openshift-enterprise' hostname='' port='' token='' metrics='True' hawkular_hostname='' hawkular_port='' custom_attributes=[{}, {}, {}]
+
+[openshift_providers:vars]
+zone='default'
+
+[amazon_providers]
+aws01 region='us-west-1' access_key_id='******' secret_access_key='******'
+
+[amazon_providers:vars]
+type='amazon'
+
+[users]
+dkorn full_name='Daniel Korn' password='123' group='EvmGroup-user'
+cben full_name='Beni Pesch' password='456' group='EvmGroup-user'

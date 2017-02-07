@@ -1,0 +1,155 @@
+---
+users:
+  - name: dkorn
+    full_name: Daniel Korn
+    password: 123
+    group: EvmGroup-user
+  - name: cben
+    full_name: Beni Pesch
+    password: 456
+    group: EvmGroup-user
+
+openshift_providers:
+  - name: openshift01
+    type: openshift-origin
+    zone: default
+    hostname: example.redhat.com
+    port: 8443
+    token: secret
+    metrics: true
+    hawkular_hostname: hawkular-metrics.redhat.com
+    hawkular_port: 443
+    custom_attributes:
+    - name: Expire Date
+      value: '2017-02-28'
+      field_type: Date
+    - name: Customer Account ID
+      value: AKIAIEY7GHEUGVHOHCAA
+    - name: Number of Expected Nodes
+      value: 2
+    - name: Cluster ID
+      value: ba83b725-089d
+    - name: Customer Name
+      value: Russell Westbrook
+
+      #amazon_providers:
+      #  - name: aws01
+      #    type: amazon
+      #    region: us-west-1
+      #    access_key_id: example
+      #    secret_access_key: secret
+
+hawkular_providers:
+  - name: hawkular01
+    type: hawkular-datawarehouse
+    hostname: hawkular-metrics.redhat.com
+    port: 443
+    token: secret
+    tenant: _ops
+    triggers:
+    - id: test-docker-ping
+      name: Test Docker Ping
+      severity: HIGH
+      auto_resolve: true
+      tags:
+        type: node
+        url: https://github.com/openshift/ops-sop/blob/master/V3/Alerts/check_docker_ping.asciidoc
+      conditions:
+        - name: Docker Ping Error
+          trigger_mode: FIRING
+          type: THRESHOLD
+          data_id: docker.ping
+          operator: LT
+          threshold: 1
+        - name: Docker Ping Ok
+          trigger_mode: AUTORESOLVE
+          type: THRESHOLD
+          data_id: docker.ping
+          operator: GTE
+          threshold: 1
+    - id: test-cpu-idle
+      name: Test CPU Idle
+      event_text: CPU IDLE is less than 5%
+      severity: MEDIUM
+      auto_resolve: true
+      tags:
+        type: node
+        url: https://github.com/openshift/ops-sop/blob/master/V3/Alerts/check_cpu_idle.asciidoc
+      conditions:
+        - name: CPU IDLE Too low
+          trigger_mode: FIRING
+          type: THRESHOLD
+          data_id: kernel.all.cpu.idle
+          operator: LT
+          threshold: 5
+        - name: CPU IDLE Ok
+          trigger_mode: AUTORESOLVE
+          type: THRESHOLD
+          data_id: kernel.all.cpu.idle
+          operator: GTE
+          threshold: 5
+    - id: test-openshift-node-process-count
+      name: Test Openshift Node process count
+      severity: HIGH
+      auto_resolve: true
+      tags:
+        type: node
+        url: https://github.com/openshift/ops-sop/blob/node/V3/Alerts/openshift_node.asciidoc
+      conditions:
+        - name: Process count Not 1
+          trigger_mode: FIRING
+          type: RANGE
+          data_id: openshift.node.process.count
+          operator_low: INCLUSIVE
+          threshold_low: 1
+          operator_high: INCLUSIVE
+          threshold_high: 1
+          in_range: false
+        - name: Process count is 1
+          trigger_mode: AUTORESOLVE
+          type: RANGE
+          data_id: openshift.node.process.count
+          operator_low: INCLUSIVE
+          threshold_low: 1
+          operator_high: INCLUSIVE
+          threshold_high: 1
+          in_range: true
+
+group_trigger_members:
+  - name: Docker Ping Member
+    description: docker.ping failed on example.node.com
+    hostname: hawkular-metrics.redhat.com
+    id: master-node-member-docker-ping
+    port: 443
+    token: secret
+    tenant: _ops
+    group_id: test-docker-ping
+    data_id_map:
+       docker.ping: hm_g_node/example.node.com/docker.ping
+    tags:
+       nodename: example.node.com
+  - name: Idle CPU Member
+    description: CPU idle less than 5% on example.node.com
+    hostname: hawkular-metrics.redhat.com
+    id: master-node-member-idle-cpu
+    port: 443
+    token: secret
+    tenant: _ops
+    group_id: test-cpu-idle
+    data_id_map:
+       kernel.all.cpu.idle: hm_g_node/example.node.com/kernel.all.cpu.idle
+    tags:
+       nodename: example.node.com
+  - name: Node process count Member
+    description: Openshift Node process not running on example.node.com
+    hostname: hawkular-metrics.redhat.com
+    id: master-node-member-node-process-count
+    port: 443
+    token: secret
+    tenant: _ops
+    group_id: test-openshift-node-process-count
+    data_id_map:
+       openshift.node.process.count: hm_g_node/example.node.com/openshift.node.process.count
+    tags:
+       nodename: example.node.com
+
