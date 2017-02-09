@@ -155,7 +155,8 @@ class ManageIQ(object):
     PROVIDER_TYPES = {
         'openshift-origin': 'ManageIQ::Providers::Openshift::ContainerManager',
         'openshift-enterprise': 'ManageIQ::Providers::OpenshiftEnterprise::ContainerManager',
-        'amazon': 'ManageIQ::Providers::Amazon::CloudManager'}
+        'amazon': 'ManageIQ::Providers::Amazon::CloudManager',
+        'hawkular-datawarehouse': "ManageIQ::Providers::Hawkular::DatawarehouseManager"}
 
     WAIT_TIME = 5
     ITERATIONS = 10
@@ -412,7 +413,7 @@ def main():
             name=dict(required=True),
             zone=dict(required=False, type='str'),
             provider_type=dict(required=True,
-                               choices=['openshift-origin', 'openshift-enterprise', 'amazon']),
+                               choices=['openshift-origin', 'openshift-enterprise', 'amazon', 'hawkular-datawarehouse']),
             state=dict(default='present',
                        choices=['present', 'absent']),
             miq_url=dict(default=os.environ.get('MIQ_URL', None)),
@@ -435,7 +436,8 @@ def main():
             ('provider_type', 'openshift-origin', ['provider_api_hostname', 'provider_api_port', 'provider_api_auth_token']),
             ('provider_type', 'openshift-enterprise', ['provider_api_hostname', 'provider_api_port', 'provider_api_auth_token']),
             ('metrics', True, ['hawkular_hostname', 'hawkular_port']),
-            ('provider_type', 'amazon', ['access_key_id', 'secret_access_key', 'provider_region'])
+            ('provider_type', 'amazon', ['access_key_id', 'secret_access_key', 'provider_region']),
+            ('provider_type', 'hawkular-datawarehouse', ['provider_api_hostname', 'provider_api_port', 'provider_api_auth_token'])
         ],
     )
 
@@ -470,6 +472,8 @@ def main():
                 endpoints.append(manageiq.generate_openshift_endpoint('hawkular', 'hawkular', h_hostname, h_port, token))
         elif provider_type == "amazon":
             endpoints = [manageiq.generate_amazon_endpoint('default', 'default', access_key_id, secret_access_key)]
+        elif provider_type == "hawkular-datawarehouse":
+            endpoints = [manageiq.generate_openshift_endpoint('default', 'default', hostname, port, token)]
 
         res_args = manageiq.add_or_update_provider(provider_name,
                                                    provider_type,
