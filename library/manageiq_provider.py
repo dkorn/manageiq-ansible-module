@@ -417,7 +417,7 @@ def main():
                        choices=['present', 'absent']),
             miq_url=dict(default=os.environ.get('MIQ_URL', None)),
             miq_username=dict(default=os.environ.get('MIQ_USERNAME', None)),
-            miq_password=dict(default=os.environ.get('MIQ_PASSWORD', None)),
+            miq_password=dict(default=os.environ.get('MIQ_PASSWORD', None), no_log=True),
             provider_api_port=dict(default=ManageIQ.OPENSHIFT_DEFAULT_PORT,
                                    required=False),
             provider_api_hostname=dict(required=False),

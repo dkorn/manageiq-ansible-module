@@ -241,7 +241,7 @@ def main():
             custom_attributes=dict(required=True, type='list'),
             miq_url=dict(default=os.environ.get('MIQ_URL', None)),
             miq_username=dict(default=os.environ.get('MIQ_USERNAME', None)),
-            miq_password=dict(default=os.environ.get('MIQ_PASSWORD', None)),
+            miq_password=dict(default=os.environ.get('MIQ_PASSWORD', None), no_log=True),
             verify_ssl=dict(require=False, type='bool', default=True),
             ca_bundle_path=dict(required=False, type='str', defualt=None),
         )
