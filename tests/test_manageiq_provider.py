@@ -10,12 +10,16 @@ import manageiq_provider
 
 PROVIDER_NAME = "Provider name 1 with some unicode characters «ταБЬℓσ»"
 AMAZON_PROVIDER_NAME = "amazon provider"
+HAWK_DW_PROVIDER_NAME = "hawkular datawarehouse provider"
 PROVIDER_HOSTNAME = "some-provider-hostname.tld"
 PROVIDER_TOKEN = "THE_PROVIDER_TOKEN"
 PROVIDER_PORT = 8443
 AMAZON_USERID = "THE_PROVIDER_USERID"
 AMAZON_PASSWORD = "THE_PROVIDER_PASSWORD"
 AMAZON_PROVIDER_REGION = "THE_PROVIDER-REGION"
+HAWK_DW_HOSTNAME = "some-datawarehose-hostname.tld"
+HAWK_DW_PROVIDER_TOKEN = "THE_DW_PROVIDER_TOKEN"
+HAWK_DW_PROVIDER_PORT = 443
 PROVIDER_ID = 134
 HAWKULAR_HOSTNAME = "some-hawkular-hostname.tld"
 HAWKULAR_PORT = 443
@@ -63,7 +67,20 @@ POST_RETURN_VALUES = {
             'zone_id': 1,
             'provider_region': 'other region'
         }]
-    }
+    },
+    'hawkular_datawarehouse': {
+        'results': [{
+            'api_version': u'v1',
+            'created_on': u'2016-09-08T15:11:29Z',
+            'guid': u'84a4084a-75d6-11e6-92bc-0242ee817803',
+            'id': PROVIDER_ID,
+            'name': u'hawkular datawarehouse provider',
+            'tenant_id': 1,
+            'type': u'ManageIQ::Providers::Hawkular::DatawarehouseManager',
+            'updated_on': u'2016-09-08T15:11:29Z',
+            'zone_id': 1
+        }]
+    },
 }
 
 GET_RETURN_VALUES = {
@@ -113,7 +130,21 @@ GET_RETURN_VALUES = {
              'status_details': 'Ok',
              'last_valid_on': '2020-09-22T11:00:30Z'}
         ]
-    }
+    },
+    'hawkular_datawarehouse': {
+        'zone_id': 1,
+        'endpoints': [{
+            'port': HAWK_DW_PROVIDER_PORT,
+            'role': 'default',
+            'hostname': HAWK_DW_HOSTNAME
+        }],
+        'authentications': [
+            {'authtype': 'default',
+             'updated_on': '2020-09-22T11:58:30Z',
+             'status': 'Valid',
+             'status_details': 'Ok',
+             'last_valid_on': '2020-09-22T11:00:30Z'}]
+    },
 }
 
 
@@ -158,21 +189,28 @@ def miq_ansible_module():
 def openshift_endpoint(miq):
     yield [
         miq.generate_auth_key_config("default", "bearer", PROVIDER_HOSTNAME,
-                                        PROVIDER_PORT, PROVIDER_TOKEN)]
+                                     PROVIDER_PORT, PROVIDER_TOKEN)]
 
 
 @pytest.fixture
 def hawkular_endpoint(miq):
     yield [
         miq.generate_auth_key_config("hawkular", "hawkular", HAWKULAR_HOSTNAME,
-                                        HAWKULAR_PORT, PROVIDER_TOKEN)]
+                                     HAWKULAR_PORT, PROVIDER_TOKEN)]
 
 
 @pytest.fixture
 def amazon_endpoint(miq):
     yield [
         miq.generate_amazon_config("default", "default", userid=AMAZON_USERID,
-                                     password=AMAZON_PASSWORD)]
+                                   password=AMAZON_PASSWORD)]
+
+
+@pytest.fixture
+def hawk_dw_endpoint(miq):
+    yield [
+        miq.generate_auth_key_config("default", "default", HAWK_DW_HOSTNAME,
+                                     HAWK_DW_PROVIDER_PORT, HAWK_DW_PROVIDER_TOKEN)]
 
 
 
@@ -199,9 +237,9 @@ def miq(miq_api_class, miq_ansible_module, the_provider, the_amazon_provider, th
 
 def test_generate_auth_key_config(miq):
     endpoint = miq.generate_auth_key_config("default", "bearer",
-                                               PROVIDER_HOSTNAME,
-                                               PROVIDER_PORT,
-                                               PROVIDER_TOKEN)
+                                            PROVIDER_HOSTNAME,
+                                            PROVIDER_PORT,
+                                            PROVIDER_TOKEN)
     assert endpoint == {'authentication': {'auth_key': PROVIDER_TOKEN,
                                            'authtype': 'bearer'},
                         'endpoint': {'hostname': PROVIDER_HOSTNAME,
@@ -262,6 +300,35 @@ def test_will_add_amazon_provider_if_none_present(miq, miq_api_class, amazon_end
                   type='ManageIQ::Providers::Amazon::CloudManager',
                   zone={'id': 1},
                   provider_region=AMAZON_PROVIDER_REGION),
+             call('{}/api/providers/{}'.format(MANAGEIQ_HOSTNAME, PROVIDER_ID),
+                  action='refresh')]
+    miq.client.post.assert_has_calls(calls)
+
+
+def test_will_add_hawkular_datawarehose_provider_if_none_present(miq, miq_api_class, hawk_dw_endpoint):
+    miq_api_class.return_value.collections.providers = []
+    miq_api_class.return_value.get.return_value = GET_RETURN_VALUES['hawkular_datawarehouse']
+    miq_api_class.return_value.post.return_value = POST_RETURN_VALUES['hawkular_datawarehouse']
+
+    res_args = miq.add_or_update_provider(
+        HAWK_DW_PROVIDER_NAME, "hawkular-datawarehouse", hawk_dw_endpoint,
+        "default", None)
+    assert res_args == {
+        'changed': True,
+        'msg': "Successful addition of {} provider. Authentication: {{'default': ('Valid', 'Ok')}}. Refreshing provider inventory".format(HAWK_DW_PROVIDER_NAME),
+        'provider_id': PROVIDER_ID,
+        'updates': None}
+    calls = [call('{}/api/providers'.format(MANAGEIQ_HOSTNAME),
+                  connection_configurations=[
+                      {'endpoint': {'port': HAWK_DW_PROVIDER_PORT,
+                                    'role': 'default',
+                                    'hostname': HAWK_DW_HOSTNAME},
+                       'authentication': {'auth_key': HAWK_DW_PROVIDER_TOKEN,
+                                          'authtype': 'default'}}],
+                  name=HAWK_DW_PROVIDER_NAME,
+                  type='ManageIQ::Providers::Hawkular::DatawarehouseManager',
+                  zone={'id': 1},
+                  provider_region=None),
              call('{}/api/providers/{}'.format(MANAGEIQ_HOSTNAME, PROVIDER_ID),
                   action='refresh')]
     miq.client.post.assert_has_calls(calls)
