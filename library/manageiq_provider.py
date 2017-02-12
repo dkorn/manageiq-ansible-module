@@ -45,7 +45,7 @@ options:
     description:
       - the provider's type
     required: true
-    choices: ['openshift-origin', 'openshift-enterprise', 'amazon']
+    choices: ['openshift-origin', 'openshift-enterprise', 'amazon', 'hawkular-datawarehouse']
   state:
     description:
       - the state of the provider
@@ -137,6 +137,19 @@ EXAMPLES = '''
     miq_url: 'http://localhost:3000'
     miq_username: 'admin'
     miq_password: '******'
+
+# name: Add Hawkular Datawarehouse Provider to ManageIQ
+  manageiq_provider:
+    name: 'HawkDW01'
+    provider_type: 'hawkular-datawarehouse'
+    state: 'present'
+    provider_api_hostname: 'hawk.example.com'
+    provider_api_port: '443'
+    provider_api_auth_token: '******'
+    miq_url: 'http://miq.example.com'
+    miq_username: 'admin'
+    miq_password: '******'
+    verify_ssl: False
 '''
 
 
@@ -156,7 +169,8 @@ class ManageIQ(object):
         'openshift-origin': 'ManageIQ::Providers::Openshift::ContainerManager',
         'openshift-enterprise': 'ManageIQ::Providers::OpenshiftEnterprise::ContainerManager',
         'amazon': 'ManageIQ::Providers::Amazon::CloudManager',
-        'hawkular-datawarehouse': "ManageIQ::Providers::Hawkular::DatawarehouseManager"}
+        'hawkular-datawarehouse': "ManageIQ::Providers::Hawkular::DatawarehouseManager",
+    }
 
     WAIT_TIME = 5
     ITERATIONS = 10
@@ -319,14 +333,14 @@ class ManageIQ(object):
         providers = self.client.collections.providers
         return next((p.id for p in providers if p.name == provider_name), None)
 
-    def generate_openshift_endpoint(self, role, authtype, hostname, port, token):
+    def generate_auth_key_config(self, role, authtype, hostname, port, token):
         """ Returns an openshift provider endpoint dictionary.
         """
         return {'endpoint': {'role': role, 'hostname': hostname,
                              'port': int(port)},
                 'authentication': {'authtype': authtype, 'auth_key': token}}
 
-    def generate_amazon_endpoint(self, role, authtype, userid, password):
+    def generate_amazon_config(self, role, authtype, userid, password):
         """ Returns an amazon provider endpoint dictionary.
         """
         return {'endpoint': {'role': role},
@@ -413,7 +427,7 @@ def main():
             name=dict(required=True),
             zone=dict(required=False, type='str'),
             provider_type=dict(required=True,
-                               choices=['openshift-origin', 'openshift-enterprise', 'amazon', 'hawkular-datawarehouse']),
+                               choices=ManageIQ.PROVIDER_TYPES.keys()),
             state=dict(default='present',
                        choices=['present', 'absent']),
             miq_url=dict(default=os.environ.get('MIQ_URL', None)),
@@ -467,13 +481,13 @@ def main():
 
     if state == 'present':
         if provider_type in ("openshift-enterprise", "openshift-origin"):
-            endpoints = [manageiq.generate_openshift_endpoint('default', 'bearer', hostname, port, token)]
+            endpoints = [manageiq.generate_auth_key_config('default', 'bearer', hostname, port, token)]
             if module.params['metrics']:
-                endpoints.append(manageiq.generate_openshift_endpoint('hawkular', 'hawkular', h_hostname, h_port, token))
+                endpoints.append(manageiq.generate_auth_key_config('hawkular', 'hawkular', h_hostname, h_port, token))
         elif provider_type == "amazon":
-            endpoints = [manageiq.generate_amazon_endpoint('default', 'default', access_key_id, secret_access_key)]
+            endpoints = [manageiq.generate_amazon_config('default', 'default', access_key_id, secret_access_key)]
         elif provider_type == "hawkular-datawarehouse":
-            endpoints = [manageiq.generate_openshift_endpoint('default', 'default', hostname, port, token)]
+            endpoints = [manageiq.generate_auth_key_config('default', 'default', hostname, port, token)]
 
         res_args = manageiq.add_or_update_provider(provider_name,
                                                    provider_type,

@@ -157,21 +157,21 @@ def miq_ansible_module():
 @pytest.fixture
 def openshift_endpoint(miq):
     yield [
-        miq.generate_openshift_endpoint("default", "bearer", PROVIDER_HOSTNAME,
+        miq.generate_auth_key_config("default", "bearer", PROVIDER_HOSTNAME,
                                         PROVIDER_PORT, PROVIDER_TOKEN)]
 
 
 @pytest.fixture
 def hawkular_endpoint(miq):
     yield [
-        miq.generate_openshift_endpoint("hawkular", "hawkular", HAWKULAR_HOSTNAME,
+        miq.generate_auth_key_config("hawkular", "hawkular", HAWKULAR_HOSTNAME,
                                         HAWKULAR_PORT, PROVIDER_TOKEN)]
 
 
 @pytest.fixture
 def amazon_endpoint(miq):
     yield [
-        miq.generate_amazon_endpoint("default", "default", userid=AMAZON_USERID,
+        miq.generate_amazon_config("default", "default", userid=AMAZON_USERID,
                                      password=AMAZON_PASSWORD)]
 
 
@@ -197,8 +197,8 @@ def miq(miq_api_class, miq_ansible_module, the_provider, the_amazon_provider, th
     yield miq
 
 
-def test_generate_openshift_endpoint(miq):
-    endpoint = miq.generate_openshift_endpoint("default", "bearer",
+def test_generate_auth_key_config(miq):
+    endpoint = miq.generate_auth_key_config("default", "bearer",
                                                PROVIDER_HOSTNAME,
                                                PROVIDER_PORT,
                                                PROVIDER_TOKEN)
