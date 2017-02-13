@@ -50,7 +50,7 @@ To update an existing user pass the changed values together with the required pa
 
 The `manageiq_policy_assignment` module currently supports assigning and unassigning Policies and Policy Profiles on resources in manageiq.  
 An example playbook [assign_policy.yml](assign_policy.yml) is provided.  
-To unassign a policy/policy profile on a resource change `state=absent`.
+To unassign a policy/policy profile from a resource change `state=absent`.
 
 ### manageiq_custom_attributes module
 
@@ -60,6 +60,14 @@ An example playbook [add_custom_attributes.yml](add_custom_attributes.yml) is pr
 To delete a custom attributes change `state=absent`.  
 It is possible to add a date type custom attributes by specifying `field_type: "Date"` and passing it in the following fromat:
 `yyyy-mm-dd`
+
+### manageiq_tag_assignment module
+
+The `manageiq_tag_assignment` module currently supports assigning and unassigning tags on resources in manageiq.  
+List of supprted entities for tag assignment can be found in the [ManageIQ REST API docs](http://manageiq.org/docs/reference/latest/api/reference/tagging)  
+Each assigned tag must be a part of a unique category.  
+An example playbook [assign_tag.yml](assign_tag.yml) is provided.  
+To unassign a tag from a resource change `state=absent`.
 
 
 
