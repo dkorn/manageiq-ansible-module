@@ -1,0 +1,51 @@
+---
+# Environment Variables
+#   This playbook assumes that the folliowing ManageIQ parameters are defined as environment variables:
+#   miq_url (MIQ_URL), miq_username (MIQ_USERNAME), miq_password (MIQ_PASSWORD)
+
+- hosts: localhost
+  vars_files:
+  - vars.yml
+  tasks:
+
+  - name: Create group trigger in Hawkular Alerts
+    with_subelements:
+      - "{{ hawkular_providers }}"
+      - triggers
+    hawkular_alerts_group_trigger:
+      hawkular_api_hostname: "{{ item.0.hostname }}"
+      hawkular_api_port: "{{ item.0.port }}"
+      hawkular_api_auth_token: "{{ item.0.token }}"
+      tenant:  "{{ item.0.tenant }}"
+      group_id: "{{ item.1.id }}"
+      name: "{{ item.1.name }}"
+      event_text: "{{ item.1.event_text|default() }}"
+      severity: "{{ item.1.severity}}"
+      auto_resolve: "{{ item.1.auto_resolve|default() }}"
+      tags: "{{ item.1.tags|default({}) }}"
+      conditions: "{{ item.1.conditions }}"
+      state: 'present'
+      verify_ssl: False
+    register: result
+
+  - debug: var=result
+
+  - name: Create group members in Hawkular Alerts
+    with_items:
+       - "{{ group_trigger_members }}"
+    hawkular_alerts_group_member:
+      hawkular_api_hostname: "{{ item.hostname }}"
+      hawkular_api_port: "{{ item.port }}"
+      hawkular_api_auth_token: "{{ item.token }}"
+      tenant:  "{{ item.tenant }}"
+      group_id: "{{ item.group_id }}"
+      id: "{{ item.id }}"
+      name:  "{{ item.name }}"
+      description:  "{{ item.description|default() }}"
+      data_id_map: "{{ item.data_id_map }}"
+      tags: "{{ item.tags|default({}) }}"
+      state: 'present'
+      verify_ssl: False
+    register: result
+
+  - debug: var=result
