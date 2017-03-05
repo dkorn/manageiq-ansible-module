@@ -27,7 +27,7 @@ options:
     default: MIQ_PASSWORD env var if set. otherwise, it is required to pass it
   verify_ssl:
     description:
-      - whether SSL certificates should be verified for HTTPS requests
+      - whether SSL certificates should be verified for HTTPS requests to ManageIQ
     required: false
     default: True
     choices: ['True', 'False']
@@ -75,6 +75,18 @@ options:
       - the provider api auth token
     required: true
     default: null
+  provider_verify_ssl:
+    description:
+      - whether SSL certificates should be verified for HTTPS requests between
+      ManageIQ and the provider
+    required: false
+    default: True
+    choices: ['True', 'False']
+  provider_ca_path:
+    description:
+      - the path to the ca file
+    required: false
+    default: null
   metrics:
     description:
       - whether metrics should be enabled in the provider
@@ -106,7 +118,8 @@ EXAMPLES = '''
     provider_api_hostname: 'oshift01.redhat.com'
     provider_api_port: '8443'
     provider_api_auth_token: '******'
-    verify_ssl: False
+    verify_ssl: false
+    provider_verify_ssl: false
     metrics: True
     hawkular_hostname: 'hawkular01.redhat.com'
     hawkular_port: '443'
@@ -119,8 +132,10 @@ EXAMPLES = '''
     miq_url: 'https://miq.example.com'
     miq_username: 'admin'
     miq_password: '******'
-    verify_ssl: True
+    verify_ssl: true
     ca_bundle_path: '/path/to/certfile'
+    provider_verify_ssl: true
+    provider_ca_path: '/path/to/provider/certfile'
     provider_api_hostname: 'oshift01.redhat.com'
     provider_api_port: '8443'
     provider_api_auth_token: '******'
@@ -133,7 +148,7 @@ EXAMPLES = '''
     access_key_id: '******'
     secret_access_key: '******'
     state: 'present'
-    verify_ssl: False
+    verify_ssl: false
     miq_url: 'http://localhost:3000'
     miq_username: 'admin'
     miq_password: '******'
@@ -149,7 +164,7 @@ EXAMPLES = '''
     miq_url: 'http://miq.example.com'
     miq_username: 'admin'
     miq_password: '******'
-    verify_ssl: False
+    verify_ssl: false
 '''
 
 
@@ -255,6 +270,7 @@ class ManageIQ(object):
         def host_port(endpoint):
             return {'hostname': endpoint.get('hostname'), 'port': endpoint.get('port')}
 
+        # TODO (dkorn/cben): add provider_verify_ssl and provider_ca_content comparison
         desired_by_role = {e['endpoint']['role']: host_port(e['endpoint']) for e in endpoints}
         result_by_role = {e['role']: host_port(e) for e in result['endpoints']}
         existing_provider_region = result.get('provider_region') or None
@@ -333,11 +349,18 @@ class ManageIQ(object):
         providers = self.client.collections.providers
         return next((p.id for p in providers if p.name == provider_name), None)
 
-    def generate_auth_key_config(self, role, authtype, hostname, port, token):
+    def generate_auth_key_config(self, role, authtype, hostname, port, token, provider_verify_ssl, provider_ca_path):
         """ Returns an openshift provider endpoint dictionary.
         """
+        provider_ca_content = None
+        if provider_ca_path:
+            with open(provider_ca_path, 'r') as provider_ca_file:
+                provider_ca_content = provider_ca_file.read()
+
         return {'endpoint': {'role': role, 'hostname': hostname,
-                             'port': int(port)},
+                             'port': int(port),
+                             'verify_ssl': provider_verify_ssl,
+                             'certificate_authority': provider_ca_content},
                 'authentication': {'authtype': authtype, 'auth_key': token}}
 
     def generate_amazon_config(self, role, authtype, userid, password):
@@ -439,6 +462,8 @@ def main():
             provider_api_auth_token=dict(required=False, no_log=True),
             verify_ssl=dict(require=False, type='bool', default=True),
             ca_bundle_path=dict(required=False, type='str', defualt=None),
+            provider_verify_ssl=dict(require=False, type='bool', default=True),
+            provider_ca_path=dict(required=False, type='str', defualt=None),
             provider_region=dict(required=False, type='str'),
             access_key_id=dict(required=False, type='str', no_log=True),
             secret_access_key=dict(required=False, type='str', no_log=True),
@@ -459,35 +484,37 @@ def main():
         if module.params[arg] in (None, ''):
             module.fail_json(msg="missing required argument: {}".format(arg))
 
-    miq_url           = module.params['miq_url']
-    miq_username      = module.params['miq_username']
-    miq_password      = module.params['miq_password']
-    verify_ssl        = module.params['verify_ssl']
-    ca_bundle_path    = module.params['ca_bundle_path']
-    provider_name     = module.params['name']
-    provider_type     = module.params['provider_type']
-    state             = module.params['state']
-    zone              = module.params['zone']
-    provider_region   = module.params['provider_region']
-    access_key_id     = module.params['access_key_id']
-    secret_access_key = module.params['secret_access_key']
-    hostname          = module.params['provider_api_hostname']
-    port              = module.params['provider_api_port']
-    token             = module.params['provider_api_auth_token']
-    h_hostname        = module.params['hawkular_hostname']
-    h_port            = module.params['hawkular_port']
+    miq_url             = module.params['miq_url']
+    miq_username        = module.params['miq_username']
+    miq_password        = module.params['miq_password']
+    verify_ssl          = module.params['verify_ssl']
+    ca_bundle_path      = module.params['ca_bundle_path']
+    provider_verify_ssl = module.params['provider_verify_ssl']
+    provider_ca_path    = module.params['provider_ca_path']
+    provider_name       = module.params['name']
+    provider_type       = module.params['provider_type']
+    state               = module.params['state']
+    zone                = module.params['zone']
+    provider_region     = module.params['provider_region']
+    access_key_id       = module.params['access_key_id']
+    secret_access_key   = module.params['secret_access_key']
+    hostname            = module.params['provider_api_hostname']
+    port                = module.params['provider_api_port']
+    token               = module.params['provider_api_auth_token']
+    h_hostname          = module.params['hawkular_hostname']
+    h_port              = module.params['hawkular_port']
 
     manageiq = ManageIQ(module, miq_url, miq_username, miq_password, verify_ssl, ca_bundle_path)
 
     if state == 'present':
         if provider_type in ("openshift-enterprise", "openshift-origin"):
-            endpoints = [manageiq.generate_auth_key_config('default', 'bearer', hostname, port, token)]
+            endpoints = [manageiq.generate_auth_key_config('default', 'bearer', hostname, port, token, provider_verify_ssl, provider_ca_path)]
             if module.params['metrics']:
-                endpoints.append(manageiq.generate_auth_key_config('hawkular', 'hawkular', h_hostname, h_port, token))
+                endpoints.append(manageiq.generate_auth_key_config('hawkular', 'hawkular', h_hostname, h_port, token, provider_verify_ssl, provider_ca_path))
         elif provider_type == "amazon":
             endpoints = [manageiq.generate_amazon_config('default', 'default', access_key_id, secret_access_key)]
         elif provider_type == "hawkular-datawarehouse":
-            endpoints = [manageiq.generate_auth_key_config('default', 'default', hostname, port, token)]
+            endpoints = [manageiq.generate_auth_key_config('default', 'default', hostname, port, token, provider_verify_ssl, provider_ca_path)]
 
         res_args = manageiq.add_or_update_provider(provider_name,
                                                    provider_type,
