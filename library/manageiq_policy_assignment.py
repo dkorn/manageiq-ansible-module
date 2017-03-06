@@ -52,7 +52,7 @@ options:
     required: false
     choices: ['present', 'absent']
     default: 'present'
-  verify_ssl:
+  miq_verify_ssl:
     description:
       - whether SSL certificates should be verified for HTTPS requests
     required: false
@@ -82,10 +82,10 @@ EXAMPLES = '''
 class ManageIQ(object):
     """ ManageIQ object to execute policy assignments in manageiq
 
-    url      - manageiq environment url
-    user     - the username in manageiq
-    password - the user password in manageiq
-    verify_ssl     - whether SSL certificates should be verified for HTTPS requests
+    url            - manageiq environment url
+    user           - the username in manageiq
+    password       - the user password in manageiq
+    miq_verify_ssl - whether SSL certificates should be verified for HTTPS requests
     ca_bundle_path - the path to a CA_BUNDLE file or directory with certificates
     """
 
@@ -100,12 +100,12 @@ class ManageIQ(object):
         'present': 'assign', 'absent': 'unassign'
     }
 
-    def __init__(self, module, url, user, password, verify_ssl, ca_bundle_path):
+    def __init__(self, module, url, user, password, miq_verify_ssl, ca_bundle_path):
         self.module        = module
         self.api_url       = url + '/api'
         self.user          = user
         self.password      = password
-        self.client        = MiqApi(self.api_url, (self.user, self.password), verify_ssl=verify_ssl, ca_bundle_path=ca_bundle_path)
+        self.client        = MiqApi(self.api_url, (self.user, self.password), verify_ssl=miq_verify_ssl, ca_bundle_path=ca_bundle_path)
         self.changed       = False
 
     def find_entity_by_name(self, entity_type, entity_name):
@@ -201,7 +201,7 @@ def main():
             miq_url=dict(default=os.environ.get('MIQ_URL', None)),
             miq_username=dict(default=os.environ.get('MIQ_USERNAME', None)),
             miq_password=dict(default=os.environ.get('MIQ_PASSWORD', None), no_log=True),
-            verify_ssl=dict(require=False, type='bool', default=True),
+            miq_verify_ssl=dict(require=False, type='bool', default=True),
             ca_bundle_path=dict(required=False, type='str', defualt=None),
         )
     )
@@ -218,10 +218,10 @@ def main():
     resource       = module.params['resource']
     resource_name  = module.params['resource_name']
     state          = module.params['state']
-    verify_ssl     = module.params['verify_ssl']
+    miq_verify_ssl = module.params['miq_verify_ssl']
     ca_bundle_path = module.params['ca_bundle_path']
 
-    manageiq = ManageIQ(module, miq_url, miq_username, miq_password, verify_ssl, ca_bundle_path)
+    manageiq = ManageIQ(module, miq_url, miq_username, miq_password, miq_verify_ssl, ca_bundle_path)
     res_args = manageiq.assign_or_unassign_entity(entity, entity_name, resource, resource_name, state)
 
     module.exit_json(**res_args)

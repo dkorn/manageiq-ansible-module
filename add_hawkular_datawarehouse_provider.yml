@@ -13,7 +13,7 @@
       miq_url: 'http://miq.example.com'
       miq_username: 'admin'
       miq_password: '******'
-      verify_ssl: false
+      miq_verify_ssl: false
       provider_verify_ssl: false
     register: result
 

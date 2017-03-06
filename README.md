@@ -75,4 +75,4 @@ It is possible to set the following environment variables, and remove them from 
 SSL verification for HTTPS requests is enabled by default.
 
 To use a self-signed certificate pass the certificate file or directory path using the ca_bundle_path option: `ca_bundle_path: '/path/to/certfile'`.
-To ignore verifying the SSL certificate pass `verify_ssl: False`
+To ignore verifying the SSL certificate pass `miq_verify_ssl: False`

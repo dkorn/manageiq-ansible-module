@@ -25,7 +25,7 @@ options:
     description:
       - manageiq password
     default: MIQ_PASSWORD env var if set. otherwise, it is required to pass it
-  verify_ssl:
+  miq_verify_ssl:
     description:
       - whether SSL certificates should be verified for HTTPS requests to ManageIQ
     required: false
@@ -118,7 +118,7 @@ EXAMPLES = '''
     provider_api_hostname: 'oshift01.redhat.com'
     provider_api_port: '8443'
     provider_api_auth_token: '******'
-    verify_ssl: false
+    miq_verify_ssl: false
     provider_verify_ssl: false
     metrics: True
     hawkular_hostname: 'hawkular01.redhat.com'
@@ -132,7 +132,7 @@ EXAMPLES = '''
     miq_url: 'https://miq.example.com'
     miq_username: 'admin'
     miq_password: '******'
-    verify_ssl: true
+    miq_verify_ssl: true
     ca_bundle_path: '/path/to/certfile'
     provider_verify_ssl: true
     provider_ca_path: '/path/to/provider/certfile'
@@ -148,7 +148,7 @@ EXAMPLES = '''
     access_key_id: '******'
     secret_access_key: '******'
     state: 'present'
-    verify_ssl: false
+    miq_verify_ssl: false
     miq_url: 'http://localhost:3000'
     miq_username: 'admin'
     miq_password: '******'
@@ -164,7 +164,7 @@ EXAMPLES = '''
     miq_url: 'http://miq.example.com'
     miq_username: 'admin'
     miq_password: '******'
-    verify_ssl: false
+    miq_verify_ssl: false
 '''
 
 
@@ -174,7 +174,7 @@ class ManageIQ(object):
     url            - manageiq environment url
     user           - the username in manageiq
     password       - the user password in manageiq
-    verify_ssl     - whether SSL certificates should be verified for HTTPS requests
+    miq_verify_ssl - whether SSL certificates should be verified for HTTPS requests
     ca_bundle_path - the path to a CA_BUNDLE file or directory with certificates
     """
 
@@ -190,12 +190,12 @@ class ManageIQ(object):
     WAIT_TIME = 5
     ITERATIONS = 10
 
-    def __init__(self, module, url, user, password, verify_ssl, ca_bundle_path):
+    def __init__(self, module, url, user, password, miq_verify_ssl, ca_bundle_path):
         self.module        = module
         self.api_url       = url + '/api'
         self.user          = user
         self.password      = password
-        self.client        = MiqApi(self.api_url, (self.user, self.password), verify_ssl=verify_ssl, ca_bundle_path=ca_bundle_path)
+        self.client        = MiqApi(self.api_url, (self.user, self.password), verify_ssl=miq_verify_ssl, ca_bundle_path=ca_bundle_path)
         self.changed       = False
         self.providers_url = self.api_url + '/providers'
 
@@ -460,7 +460,7 @@ def main():
                                    required=False),
             provider_api_hostname=dict(required=False),
             provider_api_auth_token=dict(required=False, no_log=True),
-            verify_ssl=dict(require=False, type='bool', default=True),
+            miq_verify_ssl=dict(require=False, type='bool', default=True),
             ca_bundle_path=dict(required=False, type='str', defualt=None),
             provider_verify_ssl=dict(require=False, type='bool', default=True),
             provider_ca_path=dict(required=False, type='str', defualt=None),
@@ -487,7 +487,7 @@ def main():
     miq_url             = module.params['miq_url']
     miq_username        = module.params['miq_username']
     miq_password        = module.params['miq_password']
-    verify_ssl          = module.params['verify_ssl']
+    miq_verify_ssl      = module.params['miq_verify_ssl']
     ca_bundle_path      = module.params['ca_bundle_path']
     provider_verify_ssl = module.params['provider_verify_ssl']
     provider_ca_path    = module.params['provider_ca_path']
@@ -504,7 +504,7 @@ def main():
     h_hostname          = module.params['hawkular_hostname']
     h_port              = module.params['hawkular_port']
 
-    manageiq = ManageIQ(module, miq_url, miq_username, miq_password, verify_ssl, ca_bundle_path)
+    manageiq = ManageIQ(module, miq_url, miq_username, miq_password, miq_verify_ssl, ca_bundle_path)
 
     if state == 'present':
         if provider_type in ("openshift-enterprise", "openshift-origin"):
