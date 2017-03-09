@@ -31,6 +31,8 @@ To try the modules copy and edit the relevant example playbook and execute:
 The `manageiq_provider` module currently supports adding, updating and deleting OpenShift, Amazon EC2 and Hawkular Datawarehouse providers to manageiq.  
 Example playbooks [add_openshift_provider.yml](add_openshift_provider.yml), [add_amazon_provider.yml](add_amazon_provider.yml) and [add_hawkular_datawarehouse_provider.yml](add_hawkular_datawarehouse_provider.yml) are provided.
 To update an existing provider pass the changed values together with the required parameters. To delete a provider change `state=absent`.  
+SSL verification for HTTPS requests between ManageIQ and the provider is enabled by default. To ignore pass `provider_verify_ssl: false`.
+To use a self-signed certificate pass: `provider_ca_path: '/path/to/certfile'`.  
 After addition or update, each endpoint authentication is validated, a process which can take up to 50 seconds before timeout.
 If all authentications are valid the provider's inventory is refreshed.
 
@@ -73,4 +75,4 @@ It is possible to set the following environment variables, and remove them from 
 SSL verification for HTTPS requests is enabled by default.
 
 To use a self-signed certificate pass the certificate file or directory path using the ca_bundle_path option: `ca_bundle_path: '/path/to/certfile'`.
-To ignore verifying the SSL certificate pass `verify_ssl: False`
+To ignore verifying the SSL certificate pass `miq_verify_ssl: False`

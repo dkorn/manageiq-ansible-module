@@ -14,6 +14,8 @@ HAWK_DW_PROVIDER_NAME = "hawkular datawarehouse provider"
 PROVIDER_HOSTNAME = "some-provider-hostname.tld"
 PROVIDER_TOKEN = "THE_PROVIDER_TOKEN"
 PROVIDER_PORT = 8443
+PROVIDER_VERIFY_SSL = False
+PROVIDER_CA_PATH = ""
 AMAZON_USERID = "THE_PROVIDER_USERID"
 AMAZON_PASSWORD = "THE_PROVIDER_PASSWORD"
 AMAZON_PROVIDER_REGION = "THE_PROVIDER-REGION"
@@ -189,14 +191,16 @@ def miq_ansible_module():
 def openshift_endpoint(miq):
     yield [
         miq.generate_auth_key_config("default", "bearer", PROVIDER_HOSTNAME,
-                                     PROVIDER_PORT, PROVIDER_TOKEN)]
+                                     PROVIDER_PORT, PROVIDER_TOKEN,
+                                     PROVIDER_VERIFY_SSL, PROVIDER_CA_PATH)]
 
 
 @pytest.fixture
 def hawkular_endpoint(miq):
     yield [
         miq.generate_auth_key_config("hawkular", "hawkular", HAWKULAR_HOSTNAME,
-                                     HAWKULAR_PORT, PROVIDER_TOKEN)]
+                                     HAWKULAR_PORT, PROVIDER_TOKEN,
+                                     PROVIDER_VERIFY_SSL, PROVIDER_CA_PATH)]
 
 
 @pytest.fixture
@@ -210,7 +214,8 @@ def amazon_endpoint(miq):
 def hawk_dw_endpoint(miq):
     yield [
         miq.generate_auth_key_config("default", "default", HAWK_DW_HOSTNAME,
-                                     HAWK_DW_PROVIDER_PORT, HAWK_DW_PROVIDER_TOKEN)]
+                                     HAWK_DW_PROVIDER_PORT, HAWK_DW_PROVIDER_TOKEN,
+                                     PROVIDER_VERIFY_SSL, PROVIDER_CA_PATH)]
 
 
 
@@ -228,7 +233,7 @@ def miq(miq_api_class, miq_ansible_module, the_provider, the_amazon_provider, th
     miq_ansible_module.fail_json = fail
     miq = manageiq_provider.ManageIQ(miq_ansible_module, MANAGEIQ_HOSTNAME,
                                      "The username", "The password",
-                                     verify_ssl=False, ca_bundle_path=None)
+                                     miq_verify_ssl=False, ca_bundle_path=None)
 
     miq_api_class.return_value.collections.zones = [the_zone]
 
@@ -239,12 +244,16 @@ def test_generate_auth_key_config(miq):
     endpoint = miq.generate_auth_key_config("default", "bearer",
                                             PROVIDER_HOSTNAME,
                                             PROVIDER_PORT,
-                                            PROVIDER_TOKEN)
+                                            PROVIDER_TOKEN,
+                                            PROVIDER_VERIFY_SSL,
+                                            PROVIDER_CA_PATH)
     assert endpoint == {'authentication': {'auth_key': PROVIDER_TOKEN,
                                            'authtype': 'bearer'},
                         'endpoint': {'hostname': PROVIDER_HOSTNAME,
                                      'port': PROVIDER_PORT,
-                                     'role': 'default'}}
+                                     'role': 'default',
+                                     'certificate_authority': None,
+                                     'verify_ssl': PROVIDER_VERIFY_SSL}}
 
 
 def test_will_add_openshift_provider_if_none_present(miq, miq_api_class, openshift_endpoint):
@@ -264,7 +273,9 @@ def test_will_add_openshift_provider_if_none_present(miq, miq_api_class, openshi
                   connection_configurations=[
                       {'endpoint': {'port': PROVIDER_PORT,
                                     'role': 'default',
-                                    'hostname': PROVIDER_HOSTNAME},
+                                    'hostname': PROVIDER_HOSTNAME,
+                                    'verify_ssl': PROVIDER_VERIFY_SSL,
+                                    'certificate_authority': None},
                        'authentication': {'auth_key': PROVIDER_TOKEN,
                                           'authtype': 'bearer'}}],
                   name=PROVIDER_NAME,
@@ -322,7 +333,9 @@ def test_will_add_hawkular_datawarehose_provider_if_none_present(miq, miq_api_cl
                   connection_configurations=[
                       {'endpoint': {'port': HAWK_DW_PROVIDER_PORT,
                                     'role': 'default',
-                                    'hostname': HAWK_DW_HOSTNAME},
+                                    'hostname': HAWK_DW_HOSTNAME,
+                                    'verify_ssl': PROVIDER_VERIFY_SSL,
+                                    'certificate_authority': None},
                        'authentication': {'auth_key': HAWK_DW_PROVIDER_TOKEN,
                                           'authtype': 'default'}}],
                   name=HAWK_DW_PROVIDER_NAME,

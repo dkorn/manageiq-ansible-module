@@ -49,7 +49,7 @@ options:
       - the custom attributes of the entity
     required: true
     default: null
-  verify_ssl:
+  miq_verify_ssl:
     description:
       - whether SSL certificates should be verified for HTTPS requests
     required: false
@@ -86,18 +86,18 @@ class ManageIQCustomAttributes(object):
     url            - manageiq environment url
     user           - the username in manageiq
     password       - the user password in manageiq
-    verify_ssl     - whether SSL certificates should be verified for HTTPS requests
+    miq_verify_ssl - whether SSL certificates should be verified for HTTPS requests
     ca_bundle_path - the path to a CA_BUNDLE file or directory with certificates
     """
 
     supported_entities = {'vm': 'vms', 'provider': 'providers'}
 
-    def __init__(self, module, url, user, password, verify_ssl, ca_bundle_path):
+    def __init__(self, module, url, user, password, miq_verify_ssl, ca_bundle_path):
         self.module        = module
         self.api_url       = url + '/api'
         self.user          = user
         self.password      = password
-        self.client        = MiqApi(self.api_url, (self.user, self.password), verify_ssl=verify_ssl, ca_bundle_path=ca_bundle_path)
+        self.client        = MiqApi(self.api_url, (self.user, self.password), verify_ssl=miq_verify_ssl, ca_bundle_path=ca_bundle_path)
         self.changed       = False
 
     def find_entity_by_name(self, entity_type, entity_name):
@@ -242,7 +242,7 @@ def main():
             miq_url=dict(default=os.environ.get('MIQ_URL', None)),
             miq_username=dict(default=os.environ.get('MIQ_USERNAME', None)),
             miq_password=dict(default=os.environ.get('MIQ_PASSWORD', None), no_log=True),
-            verify_ssl=dict(require=False, type='bool', default=True),
+            miq_verify_ssl=dict(require=False, type='bool', default=True),
             ca_bundle_path=dict(required=False, type='str', defualt=None),
         )
     )
@@ -258,14 +258,14 @@ def main():
     entity_type       = module.params['entity_type']
     state             = module.params['state']
     custom_attributes = module.params['custom_attributes']
-    verify_ssl        = module.params['verify_ssl']
+    miq_verify_ssl    = module.params['miq_verify_ssl']
     ca_bundle_path    = module.params['ca_bundle_path']
 
     for ca in custom_attributes:
         if 'section' not in ca:
             ca['section'] = 'metadata'
 
-    manageiq = ManageIQCustomAttributes(module, miq_url, miq_username, miq_password, verify_ssl, ca_bundle_path)
+    manageiq = ManageIQCustomAttributes(module, miq_url, miq_username, miq_password, miq_verify_ssl, ca_bundle_path)
     if state == 'present':
         res_args = manageiq.add_or_update_custom_attributes(entity_type, entity_name,
                                                             custom_attributes)
