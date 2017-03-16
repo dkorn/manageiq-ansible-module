@@ -9,6 +9,7 @@ from manageiq_client.api import ManageIQClient as MiqApi
 DOCUMENTATION = '''
 ---
 module: manageiq_provider
+description: The manageiq_provider module currently supports adding, updating and deleting OpenShift, Amazon EC2 and Hawkular Datawarehouse providers to ManageIQ.
 short_description: add, update, delete provider in ManageIQ
 requirements: [ ManageIQ/manageiq-api-client-python ]
 author: Daniel Korn (@dkorn)
@@ -50,7 +51,7 @@ options:
     description:
       - the state of the provider
       - On present, it will add the provider if it does not exist or update the
-      provider if the associated data is different
+        provider if the associated data is different
       - On absent, it will delete the provider if it exists
     required: false
     choices: ['present', 'absent']
@@ -78,7 +79,7 @@ options:
   provider_verify_ssl:
     description:
       - whether SSL certificates should be verified for HTTPS requests between
-      ManageIQ and the provider
+        ManageIQ and the provider
     required: false
     default: True
     choices: ['True', 'False']

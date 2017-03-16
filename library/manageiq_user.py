@@ -4,6 +4,7 @@
 DOCUMENTATION = '''
 ---
 module: manageiq_user
+description: The manageiq_user module supports adding, updating and deleting users in ManageIQ.
 short_description: management of users in ManageIQ
 requirements: [ ManageIQ/manageiq-api-client-python ]
 author: Daniel Korn (@dkorn)
@@ -49,7 +50,7 @@ options:
     description:
       - the state of the user
       - On present, it will create the user if it does not exist or update the
-      user if the associated data is different
+        user if the associated data is different
       - On absent, it will delete the user if it exists
     required: false
     choices: ['present', 'absent']

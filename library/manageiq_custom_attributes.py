@@ -8,6 +8,7 @@ from manageiq_client.api import ManageIQClient as MiqApi
 DOCUMENTATION = '''
 ---
 module: manageiq_custom_attributes
+description: The manageiq_custom_attributes module supports adding, updating and deleting custom attributes on resources in ManageIQ
 short_description: add, update, delete an entity custom attributes in ManageIQ
 requirements: [ ManageIQ/manageiq-api-client-python ]
 author: Daniel Korn (@dkorn)
@@ -38,8 +39,8 @@ options:
     description:
       - the state of the custom attributes
       - On present, it will add the custom attributes to the entity if not
-      already exist, or update the custom attributes if the associated data
-      is different
+        already exist, or update the custom attributes if the associated data
+        is different
       - On absent, it will delete the custom attributes from the entity if exist
     required: false
     choices: ['present', 'absent']

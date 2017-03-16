@@ -21,6 +21,10 @@ ManageIQ Python API Client package [manageiq-client] (https://github.com/ManageI
 To try the modules copy and edit the relevant example playbook and execute:
 
     $ ansible-playbook examples/EDITED_PLAYBOOK.yml -M library/
+
+To view a module documentation execute:
+
+    $ ansible-doc --module-path=library/ MODULE_NAME.py
    
 
 
