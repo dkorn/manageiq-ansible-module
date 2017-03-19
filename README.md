@@ -20,7 +20,7 @@ ManageIQ Python API Client package [manageiq-client] (https://github.com/ManageI
     
 To try the modules copy and edit the relevant example playbook and execute:
 
-    $ ansible-playbook EDITED_PLAYBOOK.yml
+    $ ansible-playbook examples/EDITED_PLAYBOOK.yml -M library/
    
 
 
@@ -35,7 +35,6 @@ SSL verification for HTTPS requests between ManageIQ and the provider is enabled
 To use a self-signed certificate pass: `provider_ca_path: '/path/to/certfile'`.  
 After addition or update, each endpoint authentication is validated, a process which can take up to 50 seconds before timeout.
 If all authentications are valid the provider's inventory is refreshed.
-
 
 ### manageiq_user module
 
