@@ -8,6 +8,7 @@ from manageiq_client.api import ManageIQClient as MiqApi
 DOCUMENTATION = '''
 ---
 module: manageiq_policy
+description: The manageiq_policy_assignment module currently supports assigning and unassigning Policies and Policy Profiles on resources in ManageIQ
 short_description: assign and unassign policies and policy profiles on resources in ManageIQ
 requirements: [ ManageIQ/manageiq-api-client-python ]
 author: Daniel Korn (@dkorn)
