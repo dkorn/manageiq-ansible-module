@@ -32,7 +32,7 @@ The `manageiq_provider` module currently supports adding, updating and deleting 
 Example playbooks [add_openshift_provider.yml](add_openshift_provider.yml), [add_amazon_provider.yml](add_amazon_provider.yml) and [add_hawkular_datawarehouse_provider.yml](add_hawkular_datawarehouse_provider.yml) are provided.
 To update an existing provider pass the changed values together with the required parameters. To delete a provider change `state=absent`.  
 SSL verification for HTTPS requests between ManageIQ and the provider is enabled by default. To ignore pass `provider_verify_ssl: false`.
-To use a self-signed certificate pass: `provider_ca_path: '/path/to/certfile'`.  
+To use a self-signed certificate pass: `provider_ca_path: '/path/to/certfile'`. To remove a previously defined ca pass `""` (empty string). In case the parameter is passed with null or omitted the `certificate_authority` field will be left unmodified (unset on creation). `provider_ca_path` must be omitted with ManageIQ Euwe / CFME 5.7 or earlier releases.
 After addition or update, each endpoint authentication is validated, a process which can take up to 50 seconds before timeout.
 If all authentications are valid the provider's inventory is refreshed.
 

@@ -85,6 +85,11 @@ options:
   provider_ca_path:
     description:
       - the path to the ca file
+      - to remove a previously defined ca pass "" (empty string)
+      - in case the parameter is passed with null or omitted the
+        certificate_authority field will be left unmodified
+        (unset on creation).
+      - must be omitted with ManageIQ Euwe / CFME 5.7 or earlier releases
     required: false
     default: null
   metrics:
@@ -352,16 +357,19 @@ class ManageIQ(object):
     def generate_auth_key_config(self, role, authtype, hostname, port, token, provider_verify_ssl, provider_ca_path):
         """ Returns an openshift provider endpoint dictionary.
         """
-        provider_ca_content = None
+        config = {'endpoint': {'role': role, 'hostname': hostname,
+                               'port': int(port),
+                               'verify_ssl': provider_verify_ssl},
+                  'authentication': {'authtype': authtype, 'auth_key': token}}
+
         if provider_ca_path:
             with open(provider_ca_path, 'r') as provider_ca_file:
                 provider_ca_content = provider_ca_file.read()
+                config['endpoint']['certificate_authority'] = provider_ca_content
+        elif provider_ca_path == "":
+            config['endpoint']['certificate_authority'] = ""
 
-        return {'endpoint': {'role': role, 'hostname': hostname,
-                             'port': int(port),
-                             'verify_ssl': provider_verify_ssl,
-                             'certificate_authority': provider_ca_content},
-                'authentication': {'authtype': authtype, 'auth_key': token}}
+        return config
 
     def generate_amazon_config(self, role, authtype, userid, password):
         """ Returns an amazon provider endpoint dictionary.
