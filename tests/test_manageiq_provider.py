@@ -252,7 +252,7 @@ def test_generate_auth_key_config(miq):
                         'endpoint': {'hostname': PROVIDER_HOSTNAME,
                                      'port': PROVIDER_PORT,
                                      'role': 'default',
-                                     'certificate_authority': None,
+                                     'certificate_authority': "",
                                      'verify_ssl': PROVIDER_VERIFY_SSL}}
 
 
@@ -275,7 +275,7 @@ def test_will_add_openshift_provider_if_none_present(miq, miq_api_class, openshi
                                     'role': 'default',
                                     'hostname': PROVIDER_HOSTNAME,
                                     'verify_ssl': PROVIDER_VERIFY_SSL,
-                                    'certificate_authority': None},
+                                    'certificate_authority': ""},
                        'authentication': {'auth_key': PROVIDER_TOKEN,
                                           'authtype': 'bearer'}}],
                   name=PROVIDER_NAME,
@@ -335,7 +335,7 @@ def test_will_add_hawkular_datawarehose_provider_if_none_present(miq, miq_api_cl
                                     'role': 'default',
                                     'hostname': HAWK_DW_HOSTNAME,
                                     'verify_ssl': PROVIDER_VERIFY_SSL,
-                                    'certificate_authority': None},
+                                    'certificate_authority': ""},
                        'authentication': {'auth_key': HAWK_DW_PROVIDER_TOKEN,
                                           'authtype': 'default'}}],
                   name=HAWK_DW_PROVIDER_NAME,
