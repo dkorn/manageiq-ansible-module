@@ -174,7 +174,7 @@ EXAMPLES = '''
 '''
 
 
-class ManageIQ(object):
+class ManageIQProvider(object):
     """ ManageIQ object to execute various operations in manageiq
 
     url            - manageiq environment url
@@ -232,7 +232,7 @@ class ManageIQ(object):
             return ((old.get('last_valid_on'), old.get('last_invalid_on')) !=
                     (new.get('last_valid_on'), new.get('last_invalid_on')))
 
-        for i in range(ManageIQ.ITERATIONS):
+        for i in range(ManageIQProvider.ITERATIONS):
             new_validation_details = self.auths_validation_details(provider_id)
 
             validations_done = True
@@ -251,7 +251,7 @@ class ManageIQ(object):
 
             if validations_done:
                 return all_done_valid, details
-            time.sleep(ManageIQ.WAIT_TIME)
+            time.sleep(ManageIQProvider.WAIT_TIME)
 
         return "Timed out", details
 
@@ -327,7 +327,7 @@ class ManageIQ(object):
         """
         try:
             result = self.client.post(self.providers_url, name=provider_name,
-                                      type=ManageIQ.PROVIDER_TYPES[provider_type],
+                                      type=ManageIQProvider.PROVIDER_TYPES[provider_type],
                                       zone={'id': zone_id},
                                       connection_configurations=endpoints,
                                       provider_region=provider_region)
@@ -459,13 +459,13 @@ def main():
             name=dict(required=True),
             zone=dict(required=False, type='str'),
             provider_type=dict(required=True,
-                               choices=ManageIQ.PROVIDER_TYPES.keys()),
+                               choices=ManageIQProvider.PROVIDER_TYPES.keys()),
             state=dict(default='present',
                        choices=['present', 'absent']),
             miq_url=dict(default=os.environ.get('MIQ_URL', None)),
             miq_username=dict(default=os.environ.get('MIQ_USERNAME', None)),
             miq_password=dict(default=os.environ.get('MIQ_PASSWORD', None), no_log=True),
-            provider_api_port=dict(default=ManageIQ.OPENSHIFT_DEFAULT_PORT,
+            provider_api_port=dict(default=ManageIQProvider.OPENSHIFT_DEFAULT_PORT,
                                    required=False),
             provider_api_hostname=dict(required=False),
             provider_api_auth_token=dict(required=False, no_log=True),
@@ -513,7 +513,7 @@ def main():
     h_hostname          = module.params['hawkular_hostname']
     h_port              = module.params['hawkular_port']
 
-    manageiq = ManageIQ(module, miq_url, miq_username, miq_password, miq_verify_ssl, ca_bundle_path)
+    manageiq = ManageIQProvider(module, miq_url, miq_username, miq_password, miq_verify_ssl, ca_bundle_path)
 
     if state == 'present':
         if provider_type in ("openshift-enterprise", "openshift-origin"):
