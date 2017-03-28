@@ -127,12 +127,6 @@ class ManageIQTagAssignment(object):
         tags_set = set([tag['name'] for tag in tags])
         return tags_set
 
-    def is_tag_assigned(self, resource_type, resource_id, category_name, tag_name, assigned_tags):
-        """Return True if the tag is assigned on the resource, False otherwise.
-        """
-        full_tag_name = '/managed/{category_name}/{tag_name}'.format(category_name=category_name, tag_name=tag_name)
-        return full_tag_name in assigned_tags
-
     def execute_action(self, resource_type, resource_id, tags, action):
         """Executes the action for the resource tag
         """
@@ -146,6 +140,12 @@ class ManageIQTagAssignment(object):
                 self.changed = True
             else:
                 self.module.fail_json(msg="Failed to {action}: {fail_message}".format(action=action, entity=entity, fail_message=result['message']))
+
+    def full_tag_name(self, tag):
+        """ Returns the full tag name in manageiq
+        """
+        full_tag_name = '/managed/{category_name}/{tag_name}'.format(category_name=tag['category'], tag_name=tag['name'])
+        return full_tag_name
 
     def assign_or_unassign_tag(self, tags, resource, resource_name, state):
         """ Assign or unassign the tag on a manageiq resource.
@@ -165,9 +165,7 @@ class ManageIQTagAssignment(object):
         tags_to_execute = []
         assigned_tags = self.query_resource_tags(resource_type, resource_id)
         for tag in tags:
-            tag_name = tag['name']
-            category_name = tag['category']
-            assigned = self.is_tag_assigned(resource_type, resource_id, category_name, tag_name, assigned_tags)
+            assigned = self.full_tag_name(tag) in assigned_tags
 
             if assigned and state == 'absent':
                 tags_to_execute.append(tag)
