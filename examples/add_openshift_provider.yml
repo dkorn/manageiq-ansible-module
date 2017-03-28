@@ -10,7 +10,7 @@
       provider_api_hostname: 'os01.example.com'
       provider_api_port: '8443'
       provider_api_auth_token: '******'
-      metrics: True
+      metrics: true
       hawkular_hostname: 'hawkular01.example.com'
       hawkular_port: '443'
       miq_url: 'http://miq.example.com'
