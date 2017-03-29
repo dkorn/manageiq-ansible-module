@@ -211,7 +211,7 @@ class ManageIQ(object):
             auths = result.get('authentications', [])
             return {auth['authtype']: auth for auth in auths}
         except Exception as e:
-            self.module.fail_json(msg="Failed to get provider data. Error: %s" % e)
+            self.module.fail_json(msg="Failed to get provider data. Error: {!r}".format(e))
 
     def verify_authenticaion_validation(self, provider_id, old_validation_details, authtypes_to_verify):
         """ Verifies that the provider's authentication validation passed.
@@ -273,12 +273,15 @@ class ManageIQ(object):
         except Exception as e:
             self.module.fail_json(msg="Failed to get provider data. Error: {!r}".format(e))
 
-        def host_port(endpoint):
-            return {'hostname': endpoint.get('hostname'), 'port': endpoint.get('port')}
+        def host_port_ssl(endpoint):
+            return {'hostname': endpoint.get('hostname'),
+                    'port': endpoint.get('port'),
+                    'verify_ssl': endpoint.get('verify_ssl'),
+                    'certificate_authority': endpoint.get('certificate_authority'),
+                    'security_protocol': endpoint.get('security_protocol')}
 
-        # TODO (dkorn/cben): add provider_verify_ssl and provider_ca_content comparison
-        desired_by_role = {e['endpoint']['role']: host_port(e['endpoint']) for e in endpoints}
-        result_by_role = {e['role']: host_port(e) for e in result['endpoints']}
+        desired_by_role = {e['endpoint']['role']: host_port_ssl(e['endpoint']) for e in endpoints}
+        result_by_role = {e['role']: host_port_ssl(e) for e in result['endpoints']}
         existing_provider_region = result.get('provider_region') or None
         if result_by_role == desired_by_role and result['zone_id'] == zone_id and existing_provider_region == provider_region:
             return {}
@@ -369,6 +372,15 @@ class ManageIQ(object):
                 config['endpoint']['certificate_authority'] = provider_ca_content
         elif provider_ca_path == "":
             config['endpoint']['certificate_authority'] = ""
+
+        # deduce security_protocol from provider_verify_ssl and certificate_authority
+        if provider_verify_ssl:
+            if config['endpoint'].get('certificate_authority'):
+                config['endpoint']['security_protocol'] = 'ssl-with-validation-custom-ca'
+            else:
+                config['endpoint']['security_protocol'] = 'ssl-with-validation'
+        else:
+            config['endpoint']['security_protocol'] = 'ssl-without-validation'
 
         return config
 
