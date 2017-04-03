@@ -69,6 +69,12 @@ Each assigned tag must be a part of a unique category.
 An example playbook [assign_tag.yml](assign_tag.yml) is provided.  
 To unassign a tag from a resource change `state=absent`.
 
+### manageiq_alert module
+
+The `manageiq_alert` module supports adding, updating and deleting alerts in manageiq.  
+Example playbook [create_alert.yml](examples/create_alert.yml) is provided.  
+To update an existing alert pass the changed values together with the required parameters. To delete an alert change `state=absent`.
+
 
 
 ## Using Environment Variables
