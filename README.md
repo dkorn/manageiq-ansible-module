@@ -33,7 +33,7 @@ To view a module documentation execute:
 ### manageiq_provider module
 
 The `manageiq_provider` module currently supports adding, updating and deleting OpenShift, Amazon EC2 and Hawkular Datawarehouse providers to manageiq.  
-Example playbooks [add_openshift_provider.yml](add_openshift_provider.yml), [add_amazon_provider.yml](add_amazon_provider.yml) and [add_hawkular_datawarehouse_provider.yml](add_hawkular_datawarehouse_provider.yml) are provided.
+Example playbooks [add_openshift_provider.yml](examples/add_openshift_provider.yml), [add_amazon_provider.yml](examples/add_amazon_provider.yml) and [add_hawkular_datawarehouse_provider.yml](examples/add_hawkular_datawarehouse_provider.yml) are provided.
 To update an existing provider pass the changed values together with the required parameters. To delete a provider change `state=absent`.  
 SSL verification for HTTPS requests between ManageIQ and the provider is enabled by default. To ignore pass `provider_verify_ssl: false`.
 To use a self-signed certificate pass: `provider_ca_path: '/path/to/certfile'`. To remove a previously defined ca pass `""` (empty string). In case the parameter is passed with null or omitted the `certificate_authority` field will be left unmodified (unset on creation). `provider_ca_path` must be omitted with ManageIQ Euwe / CFME 5.7 or earlier releases.
@@ -43,20 +43,20 @@ If all authentications are valid the provider's inventory is refreshed.
 ### manageiq_user module
 
 The `manageiq_user` module supports adding, updating and deleting users in manageiq.  
-Example playbook [create_user.yml](create_user.yml) is provided.  
+Example playbook [create_user.yml](examples/create_user.yml) is provided.  
 To update an existing user pass the changed values together with the required parameters. To delete a user change `state=absent`.
 
 ### manageiq_policy_assignment module
 
 The `manageiq_policy_assignment` module currently supports assigning and unassigning Policies and Policy Profiles on resources in manageiq.  
-An example playbook [assign_policy.yml](assign_policy.yml) is provided.  
+An example playbook [assign_policy.yml](examples/assign_policy.yml) is provided.  
 To unassign a policy/policy profile from a resource change `state=absent`.
 
 ### manageiq_custom_attributes module
 
 The `manageiq_custom_attributes` module supports adding, updating and deleting custom attributes on resources in ManageIQ.
 Currently the only resources (entities) that supports custom attributes are vms and providers.  
-An example playbook [add_custom_attributes.yml](add_custom_attributes.yml) is provided.  
+An example playbook [add_custom_attributes.yml](examples/add_custom_attributes.yml) is provided.  
 To delete a custom attributes change `state=absent`.  
 It is possible to add a date type custom attributes by specifying `field_type: "Date"` and passing it in the following fromat:
 `yyyy-mm-dd`
@@ -66,7 +66,7 @@ It is possible to add a date type custom attributes by specifying `field_type: "
 The `manageiq_tag_assignment` module currently supports assigning and unassigning tags on resources in manageiq.  
 List of supprted entities for tag assignment can be found in the [ManageIQ REST API docs](http://manageiq.org/docs/reference/latest/api/reference/tagging)  
 Each assigned tag must be a part of a unique category.  
-An example playbook [assign_tag.yml](assign_tag.yml) is provided.  
+An example playbook [assign_tag.yml](examples/assign_tag.yml) is provided.  
 To unassign a tag from a resource change `state=absent`.
 
 
