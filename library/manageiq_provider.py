@@ -85,12 +85,8 @@ options:
     choices: ['True', 'False']
   provider_ca_path:
     description:
-      - the path to the ca file
-      - to remove a previously defined ca pass "" (empty string)
-      - in case the parameter is passed with null or omitted the
-        certificate_authority field will be left unmodified
-        (unset on creation).
-      - must be omitted with ManageIQ Euwe / CFME 5.7 or earlier releases
+      - path to a file with certificate authoritie(s) to trust, in PEM format
+      - to remove a previously defined ca pass null or omit
     required: false
     default: null
   metrics:
@@ -211,7 +207,7 @@ class ManageIQProvider(object):
             auths = result.get('authentications', [])
             return {auth['authtype']: auth for auth in auths}
         except Exception as e:
-            self.module.fail_json(msg="Failed to get provider data. Error: %s" % e)
+            self.module.fail_json(msg="Failed to get provider data. Error: {!r}".format(e))
 
     def verify_authenticaion_validation(self, provider_id, old_validation_details, authtypes_to_verify):
         """ Verifies that the provider's authentication validation passed.
@@ -255,7 +251,15 @@ class ManageIQProvider(object):
 
         return "Timed out", details
 
-    def required_updates(self, provider_id, endpoints, zone_id, provider_region):
+    def get_provider_config(self, provider_id):
+        """ get the endpoint content of existing provider from manageiq API"""
+        try:
+            result = self.client.get('{providers_url}/{id}/?attributes=endpoints'.format(providers_url=self.providers_url, id=provider_id))
+            return result
+        except Exception as e:
+            self.module.fail_json(msg="Failed to get provider data. Error: {!r}".format(e))
+
+    def required_updates(self, provider_id, endpoints, zone_id, provider_region, existing_config):
         """ Checks whether an update is required for the provider
 
         Returns:
@@ -268,29 +272,27 @@ class ManageIQProvider(object):
                                 that will contain all the changed endpoints
                                 and their values.
         """
-        try:
-            result = self.client.get('{providers_url}/{id}/?attributes=endpoints'.format(providers_url=self.providers_url, id=provider_id))
-        except Exception as e:
-            self.module.fail_json(msg="Failed to get provider data. Error: {!r}".format(e))
+        def host_port_ssl(endpoint):
+            return {'hostname': endpoint.get('hostname'),
+                    'port': endpoint.get('port'),
+                    'verify_ssl': endpoint.get('verify_ssl'),
+                    'certificate_authority': endpoint.get('certificate_authority'),
+                    'security_protocol': endpoint.get('security_protocol')}
 
-        def host_port(endpoint):
-            return {'hostname': endpoint.get('hostname'), 'port': endpoint.get('port')}
-
-        # TODO (dkorn/cben): add provider_verify_ssl and provider_ca_content comparison
-        desired_by_role = {e['endpoint']['role']: host_port(e['endpoint']) for e in endpoints}
-        result_by_role = {e['role']: host_port(e) for e in result['endpoints']}
-        existing_provider_region = result.get('provider_region') or None
-        if result_by_role == desired_by_role and result['zone_id'] == zone_id and existing_provider_region == provider_region:
+        desired_by_role = {e['endpoint']['role']: host_port_ssl(e['endpoint']) for e in endpoints}
+        existing_by_role = {e['role']: host_port_ssl(e) for e in existing_config['endpoints']}
+        existing_provider_region = existing_config.get('provider_region') or None
+        if existing_by_role == desired_by_role and existing_config['zone_id'] == zone_id and existing_provider_region == provider_region:
             return {}
         updated = {role: {k: v for k, v in ep.items()
-                          if k not in result_by_role[role] or v != result_by_role[role][k]}
+                          if k not in existing_by_role[role] or v != existing_by_role[role][k]}
                    for role, ep in desired_by_role.items()
-                   if role in result_by_role and ep != result_by_role[role]}
+                   if role in existing_by_role and ep != existing_by_role[role]}
         added = {role: ep for role, ep in desired_by_role.items()
-                 if role not in result_by_role}
-        removed = {role: ep for role, ep in result_by_role.items()
+                 if role not in existing_by_role}
+        removed = {role: ep for role, ep in existing_by_role.items()
                    if role not in desired_by_role}
-        if result['zone_id'] != zone_id:
+        if existing_config['zone_id'] != zone_id:
             updated['zone_id'] = zone_id
         if existing_provider_region != provider_region:
             updated['provider_region'] = provider_region
@@ -367,8 +369,17 @@ class ManageIQProvider(object):
             with open(provider_ca_path, 'r') as provider_ca_file:
                 provider_ca_content = provider_ca_file.read()
                 config['endpoint']['certificate_authority'] = provider_ca_content
-        elif provider_ca_path == "":
-            config['endpoint']['certificate_authority'] = ""
+        else:
+            config['endpoint']['certificate_authority'] = None
+
+        # deduce security_protocol from provider_verify_ssl and provider_ca_path
+        if provider_verify_ssl:
+            if provider_ca_path:
+                config['endpoint']['security_protocol'] = 'ssl-with-validation-custom-ca'
+            else:
+                config['endpoint']['security_protocol'] = 'ssl-with-validation'
+        else:
+            config['endpoint']['security_protocol'] = 'ssl-without-validation'
 
         return config
 
@@ -402,6 +413,20 @@ class ManageIQProvider(object):
         else:
             return dict(task_id=None, changed=self.changed, msg="Provider {provider_name} doesn't exist".format(provider_name=provider_name))
 
+    def filter_unsupported_fields_from_config(self, configs, existing_endpoints, fields):
+        """
+        Only update fields that already exist in the endpoint with empty values.
+        :param configs: New configuration. method mutates this param inplace
+        :param existing_endpoints: current provider endpoints
+        :param fields: a list of fields that we want to check if already exist in provider, and if not remove empty occurences from endpoints
+        """
+        for field in fields:
+            if not any(field in e for e in existing_endpoints):
+                for c in configs:
+                    endpoint = c['endpoint']
+                    if field in endpoint and endpoint[field] is None:
+                        del endpoint[field]
+
     def add_or_update_provider(self, provider_name, provider_type, endpoints, zone, provider_region):
         """ Adds a provider to manageiq or update its attributes in case
         a provider with the same name already exists
@@ -415,7 +440,15 @@ class ManageIQProvider(object):
         # check if provider with the same name already exists
         provider_id = self.find_provider_by_name(provider_name)
         if provider_id:  # provider exists
-            updates = self.required_updates(provider_id, endpoints, zone_id, provider_region)
+            existing_config = self.get_provider_config(provider_id)
+
+            # ManageIQ Euwe / CFME 5.7 API and older versions don't support certificate authority field in endpoint.
+            # If it wasn't returned from existing provider configuration this means it is either unsupported or null,
+            # in both cases we can remove null/empty certificate_authority from endpoints we want to update.
+            self.filter_unsupported_fields_from_config(endpoints, existing_config['endpoints'], {'certificate_authority'})
+
+            updates = self.required_updates(provider_id, endpoints, zone_id, provider_region, existing_config)
+
             if not updates:
                 return dict(changed=self.changed,
                             msg="Provider %s already exists" % provider_name)
@@ -425,6 +458,10 @@ class ManageIQProvider(object):
             self.update_provider(provider_id, provider_name, endpoints, zone_id, provider_region)
             roles_with_changes = set(updates["Added"]) | set(updates["Updated"])
         else:  # provider doesn't exists, adding it to manageiq
+
+            # ManageIQ Euwe / CFME 5.7 API and older versions don't support certificate authority field in endpoint.
+            # filter empty fields if none on creation - No existing endpoints for new provider
+            self.filter_unsupported_fields_from_config(endpoints, [{}], {'certificate_authority'})
             updates = None
             old_validation_details = {}
             operation = "addition"

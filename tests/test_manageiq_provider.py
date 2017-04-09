@@ -91,7 +91,10 @@ GET_RETURN_VALUES = {
         'endpoints': [{
             'port': PROVIDER_PORT,
             'role': 'default',
-            'hostname': PROVIDER_HOSTNAME
+            'hostname': PROVIDER_HOSTNAME,
+            'verify_ssl': PROVIDER_VERIFY_SSL,
+            'certificate_authority': None,
+            'security_protocol': 'ssl-without-validation'
         }],
         'authentications': [
             {'authtype': 'bearer',
@@ -105,10 +108,16 @@ GET_RETURN_VALUES = {
         'endpoints': [
             {'port': PROVIDER_PORT,
              'role': 'default',
-             'hostname': PROVIDER_HOSTNAME},
+             'hostname': PROVIDER_HOSTNAME,
+            'verify_ssl': PROVIDER_VERIFY_SSL,
+            'certificate_authority': None,
+            'security_protocol': 'ssl-without-validation'},
             {'port': HAWKULAR_PORT,
              'role': 'hawkular',
-             'hostname': HAWKULAR_HOSTNAME}
+             'hostname': HAWKULAR_HOSTNAME,
+            'verify_ssl': PROVIDER_VERIFY_SSL,
+            'certificate_authority': None,
+            'security_protocol': 'ssl-without-validation'}
         ],
         'authentications': [
             {'authtype': 'hawkular',
@@ -252,8 +261,41 @@ def test_generate_auth_key_config(miq):
                         'endpoint': {'hostname': PROVIDER_HOSTNAME,
                                      'port': PROVIDER_PORT,
                                      'role': 'default',
-                                     'certificate_authority': "",
-                                     'verify_ssl': PROVIDER_VERIFY_SSL}}
+                                     'certificate_authority': None,
+                                     'verify_ssl': PROVIDER_VERIFY_SSL,
+                                     'security_protocol': 'ssl-without-validation'}}
+
+
+def test_filter_unsupported_fields_from_config(miq):
+
+    # Covering all combinations of:
+    # field: supported/unsupported
+    # existing value: empty/non_empty
+    # operation in new config: setting/clearing value
+    # Note: some scenarios some collapse to same function behavior e.g. unsupported and supported+empty
+
+    fields = {'unsupported_field_leaving_empty',  # should be filtered out
+              'unsupported_field_trying_to_set',  # should remain after filtering
+              'supported_empty_leaving_empty',    # should be filtered out
+              'supported_empty_setting',          # should remain after filtering
+              'supported_non_empty_clearing',     # should remain after filtering
+              'supported_non_empty_setting'}      # should remain after filtering
+
+    configs = [{'endpoint': {'unsupported_field_leaving_empty': None,
+                             'unsupported_field_trying_to_set': 3,
+                             'supported_empty_leaving_empty': None,
+                             'supported_empty_setting': 'inital_data',
+                             'supported_non_empty_clearing': None,
+                             'supported_non_empty_setting': 'new_data'}}]
+
+    existing_endpoints = [{'supported_non_empty_setting': 'old_data',
+                           'supported_non_empty_clearing': 75}]
+
+    miq.filter_unsupported_fields_from_config(configs, existing_endpoints, fields)
+    assert configs == [{'endpoint': {'unsupported_field_trying_to_set': 3,
+                                     'supported_empty_setting': 'inital_data',
+                                     'supported_non_empty_clearing': None,
+                                     'supported_non_empty_setting': 'new_data'}}]
 
 
 def test_will_add_openshift_provider_if_none_present(miq, miq_api_class, openshift_endpoint):
@@ -275,7 +317,7 @@ def test_will_add_openshift_provider_if_none_present(miq, miq_api_class, openshi
                                     'role': 'default',
                                     'hostname': PROVIDER_HOSTNAME,
                                     'verify_ssl': PROVIDER_VERIFY_SSL,
-                                    'certificate_authority': ""},
+                                    'security_protocol': 'ssl-without-validation'},
                        'authentication': {'auth_key': PROVIDER_TOKEN,
                                           'authtype': 'bearer'}}],
                   name=PROVIDER_NAME,
@@ -335,7 +377,7 @@ def test_will_add_hawkular_datawarehose_provider_if_none_present(miq, miq_api_cl
                                     'role': 'default',
                                     'hostname': HAWK_DW_HOSTNAME,
                                     'verify_ssl': PROVIDER_VERIFY_SSL,
-                                    'certificate_authority': ""},
+                                    'security_protocol': 'ssl-without-validation'},
                        'authentication': {'auth_key': HAWK_DW_PROVIDER_TOKEN,
                                           'authtype': 'default'}}],
                   name=HAWK_DW_PROVIDER_NAME,
@@ -366,7 +408,10 @@ def test_will_update_openshift_provider_if_present(miq, miq_api_class, openshift
         'provider_id': PROVIDER_ID,
         'updates': {
             'Added': {
-                'hawkular': {'hostname': 'some-hawkular-hostname.tld', 'port': 443}
+                'hawkular': {'hostname': 'some-hawkular-hostname.tld', 'port': 443,
+                             'certificate_authority': None,
+                             'verify_ssl': False,
+                             'security_protocol': 'ssl-without-validation'}
             },
             'Removed': {},
             'Updated': {}
