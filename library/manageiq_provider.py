@@ -105,6 +105,16 @@ options:
       - the port used for hawkular metrics
     required: false
     default: null
+  validate_provider_auth:
+    description:
+      - disable the provider authentication validation
+    required: false
+    default: true
+  initiate_refresh:
+    description:
+      - disable the provider inventory refresh initiation
+    required: false
+    default: true
 '''
 
 EXAMPLES = '''
@@ -427,7 +437,8 @@ class ManageIQProvider(object):
                     if field in endpoint and endpoint[field] is None:
                         del endpoint[field]
 
-    def add_or_update_provider(self, provider_name, provider_type, endpoints, zone, provider_region):
+    def add_or_update_provider(self, provider_name, provider_type, endpoints, zone, provider_region,
+            validate_provider_auth = True, initiate_refresh = True):
         """ Adds a provider to manageiq or update its attributes in case
         a provider with the same name already exists
 
@@ -469,17 +480,24 @@ class ManageIQProvider(object):
                                                 endpoints, zone_id, provider_region)
             roles_with_changes = [e['endpoint']['role'] for e in endpoints]
 
-        authtypes_to_verify = []
-        for e in endpoints:
-            if e['endpoint']['role'] in roles_with_changes:
-                authtypes_to_verify.append(e['authentication']['authtype'])
-        result, details = self.verify_authenticaion_validation(provider_id, old_validation_details, authtypes_to_verify)
+        if validate_provider_auth:
+            authtypes_to_verify = []
+            for e in endpoints:
+                if e['endpoint']['role'] in roles_with_changes:
+                    authtypes_to_verify.append(e['authentication']['authtype'])
+            result, details = self.verify_authenticaion_validation(provider_id, old_validation_details, authtypes_to_verify)
+        else:
+            result = "Skipped Validation"
+            details = result
 
         if result == "Invalid":
             self.module.fail_json(msg="Failed to Validate provider authentication after {operation}. details: {details}".format(operation=operation, details=details))
-        elif result == "Valid":
-            self.refresh_provider(provider_id)
-            message = "Successful {operation} of {provider} provider. Authentication: {validation}. Refreshing provider inventory".format(operation=operation, provider=provider_name, validation=details)
+        elif result == "Valid" or result == "Skipped Validation":
+            if initiate_refresh:
+                self.refresh_provider(provider_id)
+                message = "Successful {operation} of {provider} provider. Authentication: {validation}. Refreshing provider inventory".format(operation=operation, provider=provider_name, validation=details)
+            else:
+                message = "Successful {operation} of {provider} provider. Authentication: {validation}.".format(operation=operation, provider=provider_name, validation=details)
         elif result == "Timed out":
             message = "Provider {provider} validation after {operation} timed out. Authentication: {validation}".format(operation=operation, provider=provider_name, validation=details)
         return dict(
@@ -515,7 +533,9 @@ def main():
             secret_access_key=dict(required=False, type='str', no_log=True),
             metrics=dict(required=False, type='bool', default=False),
             hawkular_hostname=dict(required=False),
-            hawkular_port=dict(required=False)
+            hawkular_port=dict(required=False),
+            initiate_refresh=dict(required=False, type='bool', default=True),
+            validate_provider_auth=dict(required=False, type='bool', default=True)
         ),
         required_if=[
             ('provider_type', 'openshift-origin', ['provider_api_hostname', 'provider_api_port', 'provider_api_auth_token']),
@@ -530,25 +550,27 @@ def main():
         if module.params[arg] in (None, ''):
             module.fail_json(msg="missing required argument: {}".format(arg))
 
-    miq_url             = module.params['miq_url']
-    miq_username        = module.params['miq_username']
-    miq_password        = module.params['miq_password']
-    miq_verify_ssl      = module.params['miq_verify_ssl']
-    ca_bundle_path      = module.params['ca_bundle_path']
-    provider_verify_ssl = module.params['provider_verify_ssl']
-    provider_ca_path    = module.params['provider_ca_path']
-    provider_name       = module.params['name']
-    provider_type       = module.params['provider_type']
-    state               = module.params['state']
-    zone                = module.params['zone']
-    provider_region     = module.params['provider_region']
-    access_key_id       = module.params['access_key_id']
-    secret_access_key   = module.params['secret_access_key']
-    hostname            = module.params['provider_api_hostname']
-    port                = module.params['provider_api_port']
-    token               = module.params['provider_api_auth_token']
-    h_hostname          = module.params['hawkular_hostname']
-    h_port              = module.params['hawkular_port']
+    miq_url                     = module.params['miq_url']
+    miq_username                = module.params['miq_username']
+    miq_password                = module.params['miq_password']
+    miq_verify_ssl              = module.params['miq_verify_ssl']
+    ca_bundle_path              = module.params['ca_bundle_path']
+    provider_verify_ssl         = module.params['provider_verify_ssl']
+    provider_ca_path            = module.params['provider_ca_path']
+    provider_name               = module.params['name']
+    provider_type               = module.params['provider_type']
+    state                       = module.params['state']
+    zone                        = module.params['zone']
+    provider_region             = module.params['provider_region']
+    access_key_id               = module.params['access_key_id']
+    secret_access_key           = module.params['secret_access_key']
+    hostname                    = module.params['provider_api_hostname']
+    port                        = module.params['provider_api_port']
+    token                       = module.params['provider_api_auth_token']
+    h_hostname                  = module.params['hawkular_hostname']
+    h_port                      = module.params['hawkular_port']
+    validate_provider_auth      = module.params['validate_provider_auth']
+    initiate_refresh            = module.params['initiate_refresh']
 
     manageiq = ManageIQProvider(module, miq_url, miq_username, miq_password, miq_verify_ssl, ca_bundle_path)
 
@@ -566,7 +588,9 @@ def main():
                                                    provider_type,
                                                    endpoints,
                                                    zone,
-                                                   provider_region)
+                                                   provider_region,
+                                                   validate_provider_auth,
+                                                   initiate_refresh)
     elif state == 'absent':
         res_args = manageiq.delete_provider(provider_name)
 
