@@ -16,7 +16,7 @@ EXPRESSION = {
     "mode": "internal",
     "options": {}
 }
-DB = "ContainerNode"
+MIQ_ENTITY = "node"
 OPTIONS = {
     "notifications": {
         "delay_next_evaluation": 600,
@@ -55,7 +55,7 @@ GET_RETURN_VALUES = {
                     "evm_event": {}
                 }
             },
-            "db": DB,
+            "db": "ContainerNode",
             "enabled": True
         }]
     }
@@ -151,7 +151,7 @@ def test_create_alert_if_not_exist(miq, miq_api_class):
     miq_api_class.return_value.get.return_value = GET_RETURN_VALUES['alert_definitions_not_exist']
     miq_api_class.return_value.post.return_value = POST_RETURN_VALUES['created_alert']
 
-    result = miq.create_or_update_alert(DESCRIPTION, EXPRESSION, DB, OPTIONS, ENABLED)
+    result = miq.create_or_update_alert(DESCRIPTION, EXPRESSION, MIQ_ENTITY, OPTIONS, ENABLED)
     assert result == {
         'changed': True,
         'msg': "Successfully created alert {description}: {alert_details}".format(description=DESCRIPTION, alert_details=POST_RETURN_VALUES['created_alert']['results'])
@@ -159,7 +159,7 @@ def test_create_alert_if_not_exist(miq, miq_api_class):
     miq.client.post.assert_called_once_with(
         '{hostname}/api/alert_definitions/'.format(hostname=MANAGEIQ_HOSTNAME),
         action='create',
-        resource={'description': DESCRIPTION, 'expression': EXPRESSION, 'db': DB, 'options': OPTIONS, 'enabled': ENABLED}
+        resource={'description': DESCRIPTION, 'expression': EXPRESSION, 'db': 'ContainerNode', 'options': OPTIONS, 'enabled': ENABLED}
     )
 
 
@@ -170,7 +170,7 @@ def test_update_alert_options(miq, miq_api_class):
     ]
     miq_api_class.return_value.post.return_value = POST_RETURN_VALUES['updated_alert']
 
-    result = miq.create_or_update_alert(DESCRIPTION, EXPRESSION, DB, UPDATED_OPTIONS, ENABLED)
+    result = miq.create_or_update_alert(DESCRIPTION, EXPRESSION, MIQ_ENTITY, UPDATED_OPTIONS, ENABLED)
     assert result == {
         'changed': True,
         'msg': "Successfully updated alert {description}: {alert_details}".format(description=DESCRIPTION, alert_details=POST_RETURN_VALUES['updated_alert'])
@@ -207,7 +207,7 @@ def test_create_alert_with_same_attributes(miq, miq_api_class):
         GET_RETURN_VALUES['alert_definitions_exist']['resources'][0]
     ]
 
-    result = miq.create_or_update_alert(DESCRIPTION, EXPRESSION, DB, OPTIONS, ENABLED)
+    result = miq.create_or_update_alert(DESCRIPTION, EXPRESSION, MIQ_ENTITY, OPTIONS, ENABLED)
     assert result == {
         'changed': False,
         'msg': 'Alert {description} already exist, no need for updates'.format(description=DESCRIPTION)

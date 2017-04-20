@@ -21,15 +21,27 @@ options:
     description:
       - manageiq password
     default: MIQ_PASSWORD env var if set. otherwise, it is required to pass it
+  miq_verify_ssl:
+    description:
+      - whether SSL certificates should be verified for HTTPS requests
+    required: false
+    default: True
+    choices: ['True', 'False']
+  ca_bundle_path:
+    description:
+      - the path to a CA_BUNDLE file or directory with certificates
+    required: false
+    default: null
   description:
     description:
       - the alert definition description in manageiq
     required: false
     default: null
-  db:
+  entity:
     description:
-      - the db entry of the entity to base the alert on in manageiq
+      - the entity to base the alert on in manageiq
     required: false
+    choices: ['node', 'vm', 'host', 'storage', 'cluster', 'ems', 'miq_server', 'middleware_server']
     default: null
   expression:
     description:
@@ -55,17 +67,6 @@ options:
     required: false
     choices: ['present', 'absent']
     default: 'present'
-  miq_verify_ssl:
-    description:
-      - whether SSL certificates should be verified for HTTPS requests
-    required: false
-    default: True
-    choices: ['True', 'False']
-  ca_bundle_path:
-    description:
-      - the path to a CA_BUNDLE file or directory with certificates
-    required: false
-    default: null
 '''
 
 EXAMPLES = '''
@@ -76,7 +77,7 @@ EXAMPLES = '''
       notifications:
         delay_next_evaluation: 60
         evm_event: {}
-    db: ContainerNode
+    entity: node
     expression:
       eval_method: dwh_generic
       mode: internal
@@ -101,6 +102,12 @@ class ManageIQAlert(object):
     miq_verify_ssl - whether SSL certificates should be verified for HTTPS requests
     ca_bundle_path - the path to a CA_BUNDLE file or directory with certificates
     """
+
+    supported_entities = {
+        'node': 'ContainerNode', 'vm': 'Vm', 'miq_server': 'MiqServer', 'host': 'Host',
+        'storage': 'Storage', 'cluster': 'EmsCluster', 'ems': 'ExtManagementSystem',
+        'miq_server': 'MiqServer', 'middleware_server': 'MiddlewareServer'
+    }
 
     def __init__(self, module, url, user, password, miq_verify_ssl, ca_bundle_path):
         self.module        = module
@@ -142,8 +149,8 @@ class ManageIQAlert(object):
         self.changed = True
         return dict(changed=self.changed, msg=result['message'])
 
-    def alert_update_required(self, alert_id, description, expression, db, options, enabled):
-        """ Returns true if the expression, db, options, or enabled passed for
+    def alert_update_required(self, alert_id, description, expression, miq_entity, options, enabled):
+        """ Returns true if the expression, miq_entity, options, or enabled passed for
             the alert differ from the alert's existing ones, False otherwise.
         """
         url = "{api_url}/alert_definitions/{alert_id}".format(api_url=self.api_url, alert_id=alert_id)
@@ -156,26 +163,26 @@ class ManageIQAlert(object):
         current_expression = dict((k, v) for k, v in result['expression']['exp'].items() if v is not None)
         current_options = dict((k, v) for k, v in result['options'].items() if v is not None)
 
-        attributes_tuples = [(current_expression, expression), (result['db'], db), (current_options, options), (result['enabled'], enabled)]
+        attributes_tuples = [(current_expression, expression), (result['db'], miq_entity), (current_options, options), (result['enabled'], enabled)]
         for tup in attributes_tuples:
             if tup[1] is not None and tup[0] != tup[1]:
                 return True
         return False
 
-    def update_alert_if_required(self, alert_id, description, expression, db, options, enabled):
+    def update_alert_if_required(self, alert_id, description, expression, miq_entity, options, enabled):
         """Updates the alert in manageiq.
 
         Returns:
             Whether or not a change took place and a message describing the
             operation executed.
         """
-        if not self.alert_update_required(alert_id, description, expression, db, options, enabled):
+        if not self.alert_update_required(alert_id, description, expression, miq_entity, options, enabled):
             return dict(
                 changed=self.changed,
                 msg="Alert {description} already exist, no need for updates".format(description=description))
 
         url = '{api_url}/alert_definitions/{alert_id}'.format(api_url=self.api_url, alert_id=alert_id)
-        resource = {'description': description, 'expression': expression, 'db': db,
+        resource = {'description': description, 'expression': expression, 'db': miq_entity,
                     'options': options, 'enabled': enabled}
         try:
             result = self.client.post(url, action='edit', resource=resource)
@@ -186,7 +193,7 @@ class ManageIQAlert(object):
             changed=self.changed,
             msg="Successfully updated alert {description}: {alert_details}".format(description=description, alert_details=result))
 
-    def create_alert(self, description, expression, db, options, enabled):
+    def create_alert(self, description, expression, miq_entity, options, enabled):
         """Creates the alert in manageiq.
 
         Returns:
@@ -195,7 +202,7 @@ class ManageIQAlert(object):
         """
         url = '{api_url}/alert_definitions/'.format(api_url=self.api_url)
         resource = {'description': description, 'expression': expression,
-                    'db': db, 'options': options, 'enabled': enabled}
+                    'db': miq_entity, 'options': options, 'enabled': enabled}
         try:
             result = self.client.post(url, action='create', resource=resource)
             self.changed = True
@@ -205,25 +212,28 @@ class ManageIQAlert(object):
         except Exception as e:
             self.module.fail_json(msg="Failed to create alert {description}: {error}".format(description=description, error=e))
 
-    def create_or_update_alert(self, description, expression, db, options, enabled):
+    def create_or_update_alert(self, description, expression, entity, options, enabled):
         """ Create or update an alert in manageiq.
 
         Returns:
             Whether or not a change took place and a message describing the
             operation executed.
         """
+        miq_entity = ManageIQAlert.supported_entities[entity]
         alert_id = self.find_alert_by_description(description)
         if alert_id:  # alert already exist
-            return self.update_alert_if_required(alert_id, description, expression, db, options, enabled)
+            return self.update_alert_if_required(alert_id, description, expression, miq_entity, options, enabled)
         else:
-            return self.create_alert(description, expression, db, options, enabled)
+            return self.create_alert(description, expression, miq_entity, options, enabled)
 
 
 def main():
     module = AnsibleModule(
         argument_spec=dict(
             description=dict(required=False, type='str'),
-            db=dict(required=False, type='str'),
+            entity=dict(required=False, type='str',
+                        choices=['node', 'vm', 'server', 'host', 'storage', 'cluster',
+                                 'ems', 'miq_server', 'middleware_server']),
             options=dict(required=False, type='dict'),
             expression=dict(required=False, type='dict'),
             enabled=dict(require=False, type='bool', default=True),
@@ -236,7 +246,7 @@ def main():
             ca_bundle_path=dict(required=False, type='str', defualt=None)
         ),
         required_if=[
-            ('state', 'present', ['description', 'expression', 'db', 'options'])
+            ('state', 'present', ['description', 'expression', 'entity', 'options'])
         ],
     )
 
@@ -250,7 +260,7 @@ def main():
     miq_verify_ssl = module.params['miq_verify_ssl']
     ca_bundle_path = module.params['ca_bundle_path']
     description    = module.params['description']
-    db             = module.params['db']
+    entity         = module.params['entity']
     options        = module.params['options']
     expression     = module.params['expression']
     enabled        = module.params['enabled']
@@ -258,8 +268,8 @@ def main():
 
     manageiq = ManageIQAlert(module, miq_url, miq_username, miq_password, miq_verify_ssl, ca_bundle_path)
     if state == "present":
-        res_args = manageiq.create_or_update_alert(description, expression, db,
-                                                   options, enabled)
+        res_args = manageiq.create_or_update_alert(description, expression,
+                                                   entity, options, enabled)
     if state == "absent":
         res_args = manageiq.delete_alert(description)
 
