@@ -34,14 +34,15 @@ options:
     default: null
   description:
     description:
-      - the alert definition description in manageiq
-    required: false
+      - the alert definition description in manageiq. this is the primary key
+        used to match alert definitions, therefor always required
+    required: true
     default: null
   entity:
     description:
       - the entity to base the alert on in manageiq
     required: false
-    choices: ['node', 'vm', 'host', 'storage', 'cluster', 'ems', 'miq_server', 'middleware_server']
+    choices: ['container_node', 'vm', 'host', 'storage', 'cluster', 'ems', 'miq_server', 'middleware_server']
     default: null
   expression:
     description:
@@ -75,9 +76,9 @@ EXAMPLES = '''
     description: Test Alert 01
     options:
       notifications:
-        delay_next_evaluation: 60
+        delay_next_evaluation: 0
         evm_event: {}
-    entity: node
+    entity: container_node
     expression:
       eval_method: dwh_generic
       mode: internal
@@ -104,7 +105,7 @@ class ManageIQAlert(object):
     """
 
     supported_entities = {
-        'node': 'ContainerNode', 'vm': 'Vm', 'miq_server': 'MiqServer', 'host': 'Host',
+        'container_node': 'ContainerNode', 'vm': 'Vm', 'miq_server': 'MiqServer', 'host': 'Host',
         'storage': 'Storage', 'cluster': 'EmsCluster', 'ems': 'ExtManagementSystem',
         'miq_server': 'MiqServer', 'middleware_server': 'MiddlewareServer'
     }
@@ -160,12 +161,12 @@ class ManageIQAlert(object):
             self.module.fail_json(msg="Failed to get alert {description} details. Error: {error}".format(description=description, error=e))
 
         # remove None values from expression and options dicts
-        current_expression = dict((k, v) for k, v in result['expression']['exp'].items() if v is not None)
-        current_options = dict((k, v) for k, v in result['options'].items() if v is not None)
+        current_expression = {k: v for k, v in result['expression']['exp'].items() if v is not None}
+        current_options = {k: v for k, v in result['options'].items() if v is not None}
 
         attributes_tuples = [(current_expression, expression), (result['db'], miq_entity), (current_options, options), (result['enabled'], enabled)]
-        for tup in attributes_tuples:
-            if tup[1] is not None and tup[0] != tup[1]:
+        for (current, desired) in attributes_tuples:
+            if desired is not None and current != desired:
                 return True
         return False
 
@@ -230,10 +231,11 @@ class ManageIQAlert(object):
 def main():
     module = AnsibleModule(
         argument_spec=dict(
-            description=dict(required=False, type='str'),
+            description=dict(required=True, type='str'),
             entity=dict(required=False, type='str',
-                        choices=['node', 'vm', 'server', 'host', 'storage', 'cluster',
-                                 'ems', 'miq_server', 'middleware_server']),
+                        choices=['container_node', 'vm', 'server', 'host',
+                                 'storage', 'cluster', 'ems', 'miq_server',
+                                 'middleware_server']),
             options=dict(required=False, type='dict'),
             expression=dict(required=False, type='dict'),
             enabled=dict(require=False, type='bool', default=True),
@@ -246,7 +248,7 @@ def main():
             ca_bundle_path=dict(required=False, type='str', defualt=None)
         ),
         required_if=[
-            ('state', 'present', ['description', 'expression', 'entity', 'options'])
+            ('state', 'present', ['expression', 'entity', 'options'])
         ],
     )
 

@@ -11,7 +11,7 @@
       description: Test Alert 01
       options:
         notifications:
-          delay_next_evaluation: 600
+          delay_next_evaluation: 0
           evm_event: {}
       entity: node
       expression:

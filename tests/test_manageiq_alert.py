@@ -16,7 +16,7 @@ EXPRESSION = {
     "mode": "internal",
     "options": {}
 }
-MIQ_ENTITY = "node"
+MIQ_ENTITY = "container_node"
 OPTIONS = {
     "notifications": {
         "delay_next_evaluation": 600,
