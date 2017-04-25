@@ -16,7 +16,7 @@ EXISTING_CA = {"id": 6226, "name": "ca1", "value": "value 1"}
 NEW_CA = {"id": 6227, "name": "ca2", "value": "value 2"}
 UPDATED_CA_VALUE = "new value"
 DEFAULT_SECTION = "metadata"
-DIFFERENT_SECTION = 'section'
+DIFFERENT_SECTION = 'cluster_settings'
 
 
 GET_RETURN_VALUES = {
@@ -174,11 +174,11 @@ def test_compare_custom_attribute_with_section(miq, miq_api_class):
     }
 
 
-def delete_existing_custom_attribute(miq, miq_api_class):
+def test_delete_existing_custom_attribute(miq, miq_api_class):
     miq_api_class.return_value.get.return_value = GET_RETURN_VALUES['ca_exist']
     miq_api_class.return_value.post.return_value = POST_RETURN_VALUES['added_ca']
 
-    deleted_ca = [{'name': EXISTING_CA['name'], 'value': EXISTING_CA['value']}]
+    deleted_ca = [{'name': EXISTING_CA['name'], 'section': DEFAULT_SECTION}]
     result = miq.delete_custom_attributes('provider', PROVIDER_NAME, deleted_ca)
     assert result == {
         'changed': True,
