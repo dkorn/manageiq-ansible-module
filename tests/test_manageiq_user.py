@@ -10,7 +10,7 @@ import manageiq_user
 
 MANAGEIQ_HOSTNAME = "http://miq.example.com"
 USERID = "testuser"
-MANGEIQ_USER_ID = "15"
+MANGEIQ_USER_ID = "17"
 USERNAME = "Test User"
 PASSWORD = "123"
 GROUP = "Test Group"
@@ -33,13 +33,15 @@ GET_RETURN_VALUES = {
 
 POST_RETURN_VALUES = {
     'created_user': {
-        'name': USERNAME,
-        'userid': USERID,
-        'current_group_id': GROUP_ID,
-        'created_on': '2016-11-17T08:33:24Z',
-        'updated_on': u'2016-11-17T08:56:55Z',
-        'id': MANGEIQ_USER_ID,
-        'email': EMAIL
+        'results': {
+            'name': USERNAME,
+            'userid': USERID,
+            'current_group_id': GROUP_ID,
+            'created_on': '2016-11-17T08:33:24Z',
+            'updated_on': u'2016-11-17T08:56:55Z',
+            'id': MANGEIQ_USER_ID,
+            'email': EMAIL
+        }
     },
     'updated_user': {
         'name': "New Name",
@@ -52,7 +54,7 @@ POST_RETURN_VALUES = {
     },
     'deleted_user': {
         'success': 'true',
-        'message': "users id: 15 deleting",
+        'message': "users id: 17 deleting",
     }
 }
 
@@ -64,6 +66,7 @@ def the_user():
     the_user.username = USERNAME
     the_user.email = EMAIL
     the_user.password = PASSWORD
+    the_user.id = MANGEIQ_USER_ID
     yield the_user
 
 
@@ -106,15 +109,16 @@ def miq(miq_api_class, miq_ansible_module):
     yield miq
 
 
-def create_user_if_not_exist(miq, miq_api_class, the_group):
+def test_create_user_if_not_exist(miq, miq_api_class, the_group):
     miq_api_class.return_value.collections.groups = [the_group]
+    miq_api_class.return_value.collections.users = []
     miq_api_class.return_value.get.return_value = GET_RETURN_VALUES['user_not_exist']
-    miq_api_class.return_value.get.return_value = POST_RETURN_VALUES['created_user']
+    miq_api_class.return_value.post.return_value = POST_RETURN_VALUES['created_user']
 
     result = miq.create_or_update_user(USERID, USERNAME, PASSWORD, GROUP, EMAIL)
     assert result == {
         'changed': True,
-        'msg': "Successfully created the user dkorn: {}".format(POST_RETURN_VALUES['created_user'])
+        'msg': "Successfully created the user testuser: {}".format(POST_RETURN_VALUES['created_user']['results'])
     }
     miq.client.post.assert_called_once_with(
         '{hostname}/api/users'.format(hostname=MANAGEIQ_HOSTNAME),
@@ -122,39 +126,37 @@ def create_user_if_not_exist(miq, miq_api_class, the_group):
         resource={'userid': USERID, 'name': USERNAME, 'password': PASSWORD, 'group': {'id': GROUP_ID}, 'email': EMAIL}
     )
 
-def update_user_email_and_name(miq, miq_api_class, the_user, the_group):
+def test_update_user_email_and_name(miq, miq_api_class, the_user, the_group):
     miq_api_class.return_value.collections.users = [the_user]
     miq_api_class.return_value.collections.groups = [the_group]
     miq_api_class.return_value.get.return_value = GET_RETURN_VALUES['user_exist']
-    miq_api_class.return_value.get.return_value = POST_RETURN_VALUES['updated_user']
+    miq_api_class.return_value.post.return_value = POST_RETURN_VALUES['updated_user']
 
     result = miq.create_or_update_user(USERID, "New Name", PASSWORD, GROUP, "newname@example.com")
     assert result == {
         'changed': True,
-        'msg': "Successfully updated the user dkorn: {}".format(POST_RETURN_VALUES['updated_user'])
+        'msg': "Successfully updated the user testuser: {}".format(POST_RETURN_VALUES['updated_user'])
     }
     miq.client.post.assert_called_once_with(
-        '{hostname}/api/users'.format(hostname=MANAGEIQ_HOSTNAME),
-        action='update',
-        resource={'userid': USERID, 'name': USERNAME, 'password': PASSWORD, 'group': {'id': GROUP_ID}, 'email': EMAIL}
+        '{hostname}/api/users/{id}'.format(hostname=MANAGEIQ_HOSTNAME, id=the_user.id),
+        action='edit',
+        resource={'userid': USERID, 'name': "New Name", 'password': PASSWORD, 'group': {'id': GROUP_ID}, 'email': "newname@example.com"}
     )
 
 
-def delete_existing_user(miq, miq_api_class, the_user, the_group):
+def test_delete_existing_user(miq, miq_api_class, the_user, the_group):
     miq_api_class.return_value.collections.users = [the_user]
     miq_api_class.return_value.collections.groups = [the_group]
     miq_api_class.return_value.get.return_value = GET_RETURN_VALUES['user_exist']
-    miq_api_class.return_value.get.return_value = POST_RETURN_VALUES['deleted_user']
+    miq_api_class.return_value.post.return_value = POST_RETURN_VALUES['deleted_user']
 
     result = miq.delete_user(USERID)
     assert result == {
         'changed': True,
-        'msg': "users id: 15 deleting"
+        'msg': "users id: 17 deleting"
     }
-    miq.client.get.assert_called_once_with(
-        '{hostname}/api/users/{userid}'.format(hostname=MANAGEIQ_HOSTNAME, userid=USERID))
     miq.client.post.assert_called_once_with(
-        '{hostname}/api/users/{userid}'.format(hostname=MANAGEIQ_HOSTNAME, userid=USERID),
+        '{hostname}/api/users/{id}'.format(hostname=MANAGEIQ_HOSTNAME, id=MANGEIQ_USER_ID),
         action='delete')
 
 
