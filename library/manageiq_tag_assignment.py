@@ -175,7 +175,7 @@ class ManageIQTagAssignment(object):
         if not tags_to_execute:
             return dict(
                 changed=self.changed,
-                msg="tags alraedy {action}ed, nothing to do".format(action=ManageIQTagAssignment.actions[state]))
+                msg="Tags already {action}ed, nothing to do".format(action=ManageIQTagAssignment.actions[state]))
         else:
             self.execute_action(resource_type, resource_id, tags_to_execute, ManageIQTagAssignment.actions[state])
             return dict(

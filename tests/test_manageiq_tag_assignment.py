@@ -8,8 +8,8 @@ from manageiq_client.api import ManageIQClient
 import manageiq_tag_assignment
 
 
-TAG_NAME = "tag01"
-CATEGORY_NAME = "cat01"
+TAG_NAME = "test"
+CATEGORY_NAME = "environment"
 PROVIDER_NAME = "provider01"
 MANAGEIQ_HOSTNAME = "http://themanageiq.tld"
 
@@ -56,20 +56,20 @@ def miq(miq_api_class, miq_ansible_module, the_provider):
          "tag_category": "environment",
          "tag_name": "dev"}])
     miq_api_class.return_value.get.return_value = dict(resources=[
-        {"href": "http://localhost:3000/api/providers/27/tags/1",
-         "id": 1,
-         "name": "/managed/environment/dev"}])
+        {"name": "/managed/environment/test",
+         "href": "http://localhost:3000/api/providers/27/tags/1",
+         "id": 1}])
     miq_api_class.return_value.collections.providers = [the_provider]
     yield miq
 
 
-def will_try_to_assign_tag_when_allready_assigned(miq, miq_api_class, the_provider):
+def test_will_try_to_assign_tag_when_already_assigned(miq, miq_api_class, the_provider):
     res_args = miq.assign_or_unassign_tag(
         [{'name': TAG_NAME, 'category': CATEGORY_NAME}],
         'provider', PROVIDER_NAME, 'present')
     assert res_args == {
         "changed": False,
-        "msg": "Tags allready assigned, tothing to do"}
+        "msg": "Tags already assigned, nothing to do"}
 
 
 def test_will_assign_tag_on_resource_if_not_assigned(miq, miq_api_class, the_provider):
