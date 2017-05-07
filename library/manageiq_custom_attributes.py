@@ -42,7 +42,7 @@ options:
         already exist, or update the custom attributes if the associated data
         is different
       - On absent, it will delete the custom attributes from the entity if exist
-    required: false
+    required: False
     choices: ['present', 'absent']
     default: 'present'
   custom_attributes:
@@ -237,7 +237,7 @@ def main():
             entity_name=dict(required=True, type='str'),
             entity_type=dict(required=True, type='str',
                              choices=['provider', 'vm']),
-            state=dict(default='present',
+            state=dict(require=False, default='present',
                        choices=['present', 'absent']),
             custom_attributes=dict(required=True, type='list'),
             miq_url=dict(default=os.environ.get('MIQ_URL', None)),

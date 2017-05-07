@@ -53,7 +53,7 @@ options:
       - On present, it will add the provider if it does not exist or update the
         provider if the associated data is different
       - On absent, it will delete the provider if it exists
-    required: false
+    required: False
     choices: ['present', 'absent']
     default: 'present'
   zone:
@@ -515,7 +515,7 @@ def main():
             zone=dict(required=False, type='str'),
             provider_type=dict(required=True,
                                choices=ManageIQProvider.PROVIDER_TYPES.keys()),
-            state=dict(default='present',
+            state=dict(required=False, default='present',
                        choices=['present', 'absent']),
             miq_url=dict(default=os.environ.get('MIQ_URL', None)),
             miq_username=dict(default=os.environ.get('MIQ_USERNAME', None)),
