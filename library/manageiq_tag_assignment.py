@@ -46,9 +46,9 @@ options:
     description:
       - On present, it will assign the tag on the resource, if not already assigned
       - On absent, it will unassign the tag from the resource
-    required: true
+    required: False
     choices: ['present', 'absent']
-    default: null
+    default: 'present'
   miq_verify_ssl:
     description:
       - whether SSL certificates should be verified for HTTPS requests
@@ -193,8 +193,8 @@ def main():
                                    'cluster', 'data store', 'group', 'resource pool',
                                    'service', 'service template', 'template', 'tenant',
                                    'user']),
-            state=dict(required=True, type='str',
-                       choices=['present', 'absent']),
+            state=dict(required=False, type='str',
+                       choices=['present', 'absent'], default='present'),
             miq_url=dict(default=os.environ.get('MIQ_URL', None)),
             miq_username=dict(default=os.environ.get('MIQ_USERNAME', None)),
             miq_password=dict(default=os.environ.get('MIQ_PASSWORD', None), no_log=True),

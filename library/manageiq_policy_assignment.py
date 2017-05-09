@@ -50,7 +50,7 @@ options:
     description:
       - On present, it will assign the entity on the resource, if not already assigned
       - On absent, it will unassign the entity from the resource
-    required: false
+    required: False
     choices: ['present', 'absent']
     default: 'present'
   miq_verify_ssl:
@@ -197,8 +197,8 @@ def main():
             resource=dict(required=True, type='str',
                           choices=['provider', 'host', 'vm', 'container node',
                                    'pod', 'replicator', 'container image']),
-            state=dict(required=True, type='str',
-                       choices=['present', 'absent']),
+            state=dict(required=False, type='str',
+                       choices=['present', 'absent'], default='present'),
             miq_url=dict(default=os.environ.get('MIQ_URL', None)),
             miq_username=dict(default=os.environ.get('MIQ_USERNAME', None)),
             miq_password=dict(default=os.environ.get('MIQ_PASSWORD', None), no_log=True),

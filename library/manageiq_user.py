@@ -52,8 +52,9 @@ options:
       - On present, it will create the user if it does not exist or update the
         user if the associated data is different
       - On absent, it will delete the user if it exists
-    required: false
+    required: False
     choices: ['present', 'absent']
+    default: 'present'
   miq_verify_ssl:
     description:
       - whether SSL certificates should be verified for HTTPS requests
@@ -221,8 +222,8 @@ def main():
             password=dict(required=False, type='str', no_log=True),
             group=dict(required=False, type='str'),
             email=dict(required=False, type='str'),
-            state=dict(required=True, type='str',
-                       choices=['present', 'absent']),
+            state=dict(required=False, type='str',
+                       choices=['present', 'absent'], defualt='present'),
             miq_url=dict(default=os.environ.get('MIQ_URL', None)),
             miq_username=dict(default=os.environ.get('MIQ_USERNAME', None)),
             miq_password=dict(default=os.environ.get('MIQ_PASSWORD', None), no_log=True),
