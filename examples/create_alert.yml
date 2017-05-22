@@ -13,9 +13,11 @@
         notifications:
           delay_next_evaluation: 0
           evm_event: {}
-      entity: node
+      entity: container_node
       expression:
         eval_method: dwh_generic
         mode: internal
+        options: {}
+      expression_type: hash
       enabled: true
       state: present

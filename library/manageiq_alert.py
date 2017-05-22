@@ -49,6 +49,12 @@ options:
       - the expression to evaluate
     required: false
     default: null
+  expression_type:
+    description:
+      - the type of the alert expression
+    required: false
+    choices: ['miq_expression', 'hash']
+    default: miq_expression
   options:
     description:
       - Additional alert options, including the notification type and frequency
@@ -82,6 +88,7 @@ EXAMPLES = '''
     expression:
       eval_method: dwh_generic
       mode: internal
+    expression_type: hash
     enabled: true
     state: present
     miq_url: 'http://localhost:3000'
@@ -150,7 +157,7 @@ class ManageIQAlert(object):
         self.changed = True
         return dict(changed=self.changed, msg=result['message'])
 
-    def alert_update_required(self, alert_id, description, expression, miq_entity, options, enabled):
+    def alert_update_required(self, alert_id, description, expression, expression_type, miq_entity, options, enabled):
         """ Returns true if the expression, miq_entity, options, or enabled passed for
             the alert differ from the alert's existing ones, False otherwise.
         """
@@ -160,8 +167,12 @@ class ManageIQAlert(object):
         except Exception as e:
             self.module.fail_json(msg="Failed to get alert {description} details. Error: {error}".format(description=description, error=e))
 
-        # remove None values from expression and options dicts
-        current_expression = {k: v for k, v in result['expression']['exp'].items() if v is not None}
+        # remove None values from expression and options dicts, if needed
+        # TODO (dkorn): use the expression_type from the response, once supported
+        if expression_type == 'miq_expression':
+            current_expression = {k: v for k, v in result['expression']['exp'].items() if v is not None}
+        else:
+            current_expression = result['expression']
         current_options = {k: v for k, v in result['options'].items() if v is not None}
 
         attributes_tuples = [(current_expression, expression), (result['db'], miq_entity), (current_options, options), (result['enabled'], enabled)]
@@ -170,20 +181,21 @@ class ManageIQAlert(object):
                 return True
         return False
 
-    def update_alert_if_required(self, alert_id, description, expression, miq_entity, options, enabled):
+    def update_alert_if_required(self, alert_id, description, expression, expression_type, miq_entity, options, enabled):
         """Updates the alert in manageiq.
 
         Returns:
             Whether or not a change took place and a message describing the
             operation executed.
         """
-        if not self.alert_update_required(alert_id, description, expression, miq_entity, options, enabled):
+        if not self.alert_update_required(alert_id, description, expression, expression_type, miq_entity, options, enabled):
             return dict(
                 changed=self.changed,
                 msg="Alert {description} already exist, no need for updates".format(description=description))
 
         url = '{api_url}/alert_definitions/{alert_id}'.format(api_url=self.api_url, alert_id=alert_id)
-        resource = {'description': description, 'expression': expression, 'db': miq_entity,
+        resource = {'description': description, 'expression': expression,
+                    'expression_type': expression_type, 'db': miq_entity,
                     'options': options, 'enabled': enabled}
         try:
             result = self.client.post(url, action='edit', resource=resource)
@@ -194,7 +206,7 @@ class ManageIQAlert(object):
             changed=self.changed,
             msg="Successfully updated alert {description}: {alert_details}".format(description=description, alert_details=result))
 
-    def create_alert(self, description, expression, miq_entity, options, enabled):
+    def create_alert(self, description, expression, expression_type, miq_entity, options, enabled):
         """Creates the alert in manageiq.
 
         Returns:
@@ -203,7 +215,8 @@ class ManageIQAlert(object):
         """
         url = '{api_url}/alert_definitions/'.format(api_url=self.api_url)
         resource = {'description': description, 'expression': expression,
-                    'db': miq_entity, 'options': options, 'enabled': enabled}
+                    'expression_type': expression_type, 'db': miq_entity,
+                    'options': options, 'enabled': enabled}
         try:
             result = self.client.post(url, action='create', resource=resource)
             self.changed = True
@@ -213,7 +226,7 @@ class ManageIQAlert(object):
         except Exception as e:
             self.module.fail_json(msg="Failed to create alert {description}: {error}".format(description=description, error=e))
 
-    def create_or_update_alert(self, description, expression, entity, options, enabled):
+    def create_or_update_alert(self, description, expression, expression_type, entity, options, enabled):
         """ Create or update an alert in manageiq.
 
         Returns:
@@ -223,9 +236,9 @@ class ManageIQAlert(object):
         miq_entity = ManageIQAlert.supported_entities[entity]
         alert_id = self.find_alert_by_description(description)
         if alert_id:  # alert already exist
-            return self.update_alert_if_required(alert_id, description, expression, miq_entity, options, enabled)
+            return self.update_alert_if_required(alert_id, description, expression, expression_type, miq_entity, options, enabled)
         else:
-            return self.create_alert(description, expression, miq_entity, options, enabled)
+            return self.create_alert(description, expression, expression_type, miq_entity, options, enabled)
 
 
 def main():
@@ -238,6 +251,9 @@ def main():
                                  'middleware_server']),
             options=dict(required=False, type='dict'),
             expression=dict(required=False, type='dict'),
+            expression_type=dict(required=False, type='str',
+                                 default='miq_expression',
+                                 choices=['miq_expression', 'hash']),
             enabled=dict(require=False, type='bool', default=True),
             state=dict(required=True, type='str',
                        choices=['present', 'absent']),
@@ -256,22 +272,24 @@ def main():
         if module.params[arg] in (None, ''):
             module.fail_json(msg="missing required argument: {}".format(arg))
 
-    miq_url        = module.params['miq_url']
-    miq_username   = module.params['miq_username']
-    miq_password   = module.params['miq_password']
-    miq_verify_ssl = module.params['miq_verify_ssl']
-    ca_bundle_path = module.params['ca_bundle_path']
-    description    = module.params['description']
-    entity         = module.params['entity']
-    options        = module.params['options']
-    expression     = module.params['expression']
-    enabled        = module.params['enabled']
-    state          = module.params['state']
+    miq_url         = module.params['miq_url']
+    miq_username    = module.params['miq_username']
+    miq_password    = module.params['miq_password']
+    miq_verify_ssl  = module.params['miq_verify_ssl']
+    ca_bundle_path  = module.params['ca_bundle_path']
+    description     = module.params['description']
+    entity          = module.params['entity']
+    options         = module.params['options']
+    expression      = module.params['expression']
+    expression_type = module.params['expression_type']
+    enabled         = module.params['enabled']
+    state           = module.params['state']
 
     manageiq = ManageIQAlert(module, miq_url, miq_username, miq_password, miq_verify_ssl, ca_bundle_path)
     if state == "present":
         res_args = manageiq.create_or_update_alert(description, expression,
-                                                   entity, options, enabled)
+                                                   expression_type, entity,
+                                                   options, enabled,)
     if state == "absent":
         res_args = manageiq.delete_alert(description)
 
