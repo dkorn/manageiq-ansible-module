@@ -9,6 +9,6 @@ setup(
     package_dir={'': 'library'},
     py_modules=["manageiq_provider", "manageiq_policy_assignment",
                 "manageiq_custom_attributes", "manageiq_user",
-                "manageiq_tag_assignment"],
+                "manageiq_tag_assignment", "manageiq_utils"],
     install_requires='ansible manageiq-client'.split(),
 )
