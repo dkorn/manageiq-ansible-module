@@ -5,7 +5,7 @@
 
 - hosts: localhost
   vars_files:
-  - vars.yml
+  - vars_heapster.yml
   tasks:
 
   - name: Create group trigger in Hawkular Alerts
@@ -24,7 +24,7 @@
       auto_resolve: "{{ item.1.auto_resolve|default() }}"
       tags: "{{ item.1.tags|default({}) }}"
       conditions: "{{ item.1.conditions }}"
-      state: 'present'
+      state: "{{state | default('present')}}"
       verify_ssl: False
     register: result
 
@@ -44,7 +44,7 @@
       description:  "{{ item.description|default() }}"
       data_id_map: "{{ item.data_id_map }}"
       tags: "{{ item.tags|default({}) }}"
-      state: 'present'
+      state: "{{state | default('present')}}"
       verify_ssl: False
     register: result
 

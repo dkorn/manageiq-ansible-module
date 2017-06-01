@@ -1,0 +1,78 @@
+---
+
+hawkular_host: yzamir-centos7-4.eng.lab.tlv.redhat.com
+hawkular_token: eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9uYW1lc3BhY2UiOiJtYW5hZ2VtZW50LWluZnJhIiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZWNyZXQubmFtZSI6Im1hbmFnZW1lbnQtYWRtaW4tdG9rZW4tM3Jyem4iLCJrdWJlcm5ldGVzLmlvL3NlcnZpY2VhY2NvdW50L3NlcnZpY2UtYWNjb3VudC5uYW1lIjoibWFuYWdlbWVudC1hZG1pbiIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VydmljZS1hY2NvdW50LnVpZCI6ImZhN2UzYjJhLTNhMWEtMTFlNy1hZjBlLTAwMWE0YTIzMTRkOCIsInN1YiI6InN5c3RlbTpzZXJ2aWNlYWNjb3VudDptYW5hZ2VtZW50LWluZnJhOm1hbmFnZW1lbnQtYWRtaW4ifQ.YGFnSjFdUYc2DiKSUEs6ybVexHwJ6LU7YcWoWler8iEqU19UFLC2ASMkAZ9BL6RplZX0X2ISma1NXTJciPbweDtn4AX6BVCFyPqeAUacG-wxdeHfAqAMrr-s1LJqNSAwsfE0ODgewEyj9Q8n1fgIOUGTmvDx6Sl4G5sgoyOZSbwGyc7qeMRfp9EUV729G2vXl_UcMVwIuUdaaDpVXPW9OgzF3Q3thhXDXWH6B-z3XhLAO4estKHQs5FH4ZR1G9e4AJ0K5oPKTmOT2gmTQkaAYNUW_GQdeleHKle4ix8-HouCgo0LegL2io3DIIbVI4qMr7ae-ATCSrtQAKLv0_aN4Q
+hawkular_tenant: _system
+hawkular_node: vm-48-39.eng.lab.tlv.redhat.com
+
+hawkular_providers:
+  - name: hawkular01
+    type: hawkular-datawarehouse
+    hostname: "{{ hawkular_host }}"
+    port: 443
+    token: "{{ hawkular_token }}"
+    tenant: "{{ hawkular_tenant }}"
+    triggers:
+    - id: test-cpu-node-utilization
+      name: Test CPU node utilization
+      event_text: CPU node utilization more than 90%
+      severity: MEDIUM
+      auto_resolve: true
+      tags:
+        type: node
+      conditions:
+        - name: CPU node utilization too high
+          trigger_mode: FIRING
+          type: THRESHOLD
+          data_id: cpu.node_utilization
+          operator: GT
+          threshold: 0.40
+        - name: CPU Utilization Ok
+          trigger_mode: AUTORESOLVE
+          type: THRESHOLD
+          data_id: cpu.node_utilization
+          operator: LTE
+          threshold: 0.40
+#    - id: test-memory-node-utilization
+#      name: Test memory node utilization
+#      severity: HIGH
+#      auto_resolve: true
+#      tags:
+#        type: node
+#      conditions:
+#        - name: Memory node utilization too high
+#          type: THRESHOLD
+#          data_id: memory.node_utilization
+#          operator: GT
+#          threshold: 0.80
+#        - name: Memory Usage Ok
+#          trigger_mode: AUTORESOLVE
+#          type: THRESHOLD
+#          data_id: memory.node_utilization
+#          operator: LTE
+#          threshold: 0.80
+group_trigger_members:
+  - name: CPU node_utilization Member
+    description: CPU node_utilization more than 90% on {{ hawkular_node }}
+    hostname: "{{ hawkular_host }}"
+    id: member-cpu-usage
+    port: 443
+    token: "{{ hawkular_token }}"
+    tenant: "{{ hawkular_tenant }}"
+    group_id: test-cpu-node-utilization
+    data_id_map:
+       cpu.node_utilization: hm_g_machine/{{ hawkular_node }}/cpu/usage
+    tags:
+       nodename: "{{ hawkular_node }}"
+#  - name: Memory Usage member
+#    description: CPU usage less than 5% on {{ hawkular_node }}
+#    hostname: "{{ hawkular_host }}"
+#    id: member-memory-usage
+#    port: 443
+#    token: "{{ hawkular_token }}"
+#    tenant: "{{ hawkular_tenant }}"
+#    group_id: test-memory-node-utilization
+#    data_id_map:
+#       memory.node_utilization: hm_g_machine/{{ hawkular_node }}/memory/usage
+#    tags:
+#       nodename: "{{ hawkular_node }}"
