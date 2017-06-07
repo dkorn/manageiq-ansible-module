@@ -1,75 +1,77 @@
 #!/usr/bin/python
+#
+# (c) 2017, Daniel Korn <korndaniel1@gmail.com>
+#
+# This file is part of Ansible
+#
+# Ansible is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# Ansible is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
+
+ANSIBLE_METADATA = {'metadata_version': '1.0',
+                    'status': ['preview'],
+                    'supported_by': 'community'}
 
 
 DOCUMENTATION = '''
----
+
 module: manageiq_user
-description: The manageiq_user module supports adding, updating and deleting users in ManageIQ.
-short_description: management of users in ManageIQ
-requirements: [ ManageIQ/manageiq-api-client-python ]
+
+short_description: Management of users in ManageIQ
+extends_documentation_fragment: manageiq
+version_added: '2.4'
 author: Daniel Korn (@dkorn)
+description:
+  - The manageiq_user module supports adding, updating and deleting users in ManageIQ.
+
 options:
-  miq_url:
-    description:
-      - the manageiq environment url
-    default: MIQ_URL env var if set. otherwise, it is required to pass it
-  miq_username:
-    description:
-      - manageiq username
-    default: MIQ_USERNAME env var if set. otherwise, it is required to pass it
-  miq_password:
-    description:
-      - manageiq password
-    default: MIQ_PASSWORD env var if set. otherwise, it is required to pass it
   name:
     description:
-      - the unique userid in manageiq, often mentioned as username
+      - The unique userid in manageiq, often mentioned as username
     required: true
     default: null
   fullname:
     description:
-      - the users' full name
+      - The users' full name
     required: false
     default: null
   password:
     description:
-      - the users' password
+      - The users' password
     required: false
     default: null
   group:
     description:
-      - the name of the group to which the user belongs
+      - The name of the group to which the user belongs
     required: false
     default: null
   email:
     description:
-      - the users' E-mail address
+      - The users' E-mail address
     required: false
     default: null
   state:
     description:
-      - the state of the user
+      - The state of the user
       - On present, it will create the user if it does not exist or update the
         user if the associated data is different
       - On absent, it will delete the user if it exists
     required: False
     choices: ['present', 'absent']
     default: 'present'
-  miq_verify_ssl:
-    description:
-      - whether SSL certificates should be verified for HTTPS requests
-    required: false
-    default: True
-    choices: ['True', 'False']
-  ca_bundle_path:
-    description:
-      - the path to a CA_BUNDLE file or directory with certificates
-    required: false
-    default: null
 '''
 
 EXAMPLES = '''
-# Create a new user in ManageIQ
+- name: Create a new user in ManageIQ
   manageiq_user:
     name: 'dkorn'
     fullname: 'Daniel Korn'
@@ -80,48 +82,24 @@ EXAMPLES = '''
     miq_url: 'http://localhost:3000'
     miq_username: 'admin'
     miq_password: '******'
-    miq_verify_ssl: False
+    validate_certs: False
 '''
 
-import os
-from manageiq_client.api import ManageIQClient as MiqApi
+RETURN = '''
+'''
+
+from ansible.module_utils.basic import AnsibleModule
+import manageiq as manageiq_utils
 
 
 class ManageIQUser(object):
-    """ ManageIQ object to execute user management operations in manageiq
-
-    url            - manageiq environment url
-    user           - the username in manageiq
-    password       - the user password in manageiq
-    miq_verify_ssl - whether SSL certificates should be verified for HTTPS requests
-    ca_bundle_path - the path to a CA_BUNDLE file or directory with certificates
+    """
+        object to execute user management operations in manageiq
     """
 
-    def __init__(self, module, url, user, password, miq_verify_ssl, ca_bundle_path):
-        self.module        = module
-        self.api_url       = url + '/api'
-        self.user          = user
-        self.password      = password
-        self.client        = MiqApi(self.api_url, (self.user, self.password), verify_ssl=miq_verify_ssl, ca_bundle_path=ca_bundle_path)
-        self.changed       = False
-
-    def find_group_by_name(self, group_name):
-        """ Searches the group name in ManageIQ.
-
-        Returns:
-            the group id if it exists in manageiq, None otherwise.
-        """
-        groups = self.client.collections.groups
-        return next((group.id for group in groups if group.description == group_name), None)
-
-    def find_user_by_userid(self, userid):
-        """ Searches the userid in ManageIQ.
-
-        Returns:
-            the user's id if it exists in manageiq, None otherwise.
-        """
-        users = self.client.collections.users
-        return next((user.id for user in users if user.userid == userid), None)
+    def __init__(self, manageiq):
+        self.changed = False
+        self.manageiq = manageiq
 
     def delete_user(self, userid):
         """Deletes the user from manageiq.
@@ -129,52 +107,53 @@ class ManageIQUser(object):
         Returns:
             a short message describing the operation executed.
         """
-        user_id = self.find_user_by_userid(userid)
-        if not user_id:  # user doesn't exist
+        user = self.manageiq.find_collection_resource_by('users', userid=userid)
+        if not user:  # user doesn't exist
             return dict(
                 changed=self.changed,
                 msg="User {userid} does not exist in manageiq".format(userid=userid))
         try:
-            url = '{api_url}/users/{user_id}'.format(api_url=self.api_url, user_id=user_id)
-            result = self.client.post(url, action='delete')
+            url = '{api_url}/users/{user_id}'.format(api_url=self.manageiq.api_url, user_id=user['id'])
+            result = self.manageiq.client.post(url, action='delete')
             self.changed = True
             return dict(changed=self.changed, msg=result['message'])
         except Exception as e:
-            self.module.fail_json(msg="Failed to delete user {userid}: {error}".format(userid=userid, error=e))
+            self.manageiq.module.fail_json(msg="Failed to delete user {userid}: {error}".format(userid=userid, error=e))
 
-    def user_update_required(self, user_id, userid, username, group_id, email):
-        """ Returns true if the username, group id or email passed for the user
+    def user_update_required(self, user, username, group_id, email):
+        """ Returns True if the username, group id or email passed for the user
             differ from the user's existing ones, False otherwise.
         """
-        try:
-            url = "{api_url}/users/{user_id}".format(api_url=self.api_url, user_id=user_id)
-            result = self.client.get(url)
-            return result['name'] != username or result['current_group_id'] != group_id or result.get('email') != email
-        except Exception as e:
-            self.module.fail_json(msg="Failed to get user {userid} details. Error: {error}".format(userid=userid, error=e))
+        if username is not None and user['name'] != username:
+            return True
+        if group_id is not None and user['current_group_id'] != group_id:
+            return True
+        if email is not None and user.get('email') != email:
+            return True
+        return False
 
-    def update_user_if_required(self, user_id, userid, username, group_id, password, email):
+    def update_user_if_required(self, user, userid, username, group_id, password, email):
         """Updates the user in manageiq.
 
         Returns:
             the created user id, name, created_on timestamp,
             updated_on timestamp, userid and current_group_id
         """
-        if not self.user_update_required(user_id, userid, username, group_id, email):
+        if not self.user_update_required(user, username, group_id, email):
             return dict(
                 changed=self.changed,
                 msg="User {userid} already exist, no need for updates".format(userid=userid))
+        url = '{api_url}/users/{user_id}'.format(api_url=self.manageiq.api_url, user_id=user.id)
+        resource = {'userid': userid, 'name': username, 'password': password,
+                    'group': {'id': group_id}, 'email': email}
         try:
-            url = '{api_url}/users/{user_id}'.format(api_url=self.api_url, user_id=user_id)
-            resource = {'userid': userid, 'name': username, 'password': password,
-                        'group': {'id': group_id}, 'email': email}
-            result = self.client.post(url, action='edit', resource=resource)
-            self.changed = True
-            return dict(
-                changed=self.changed,
-                msg="Successfully updated the user {userid}: {user_details}".format(userid=userid, user_details=result))
+            result = self.manageiq.client.post(url, action='edit', resource=resource)
         except Exception as e:
-            self.module.fail_json(msg="Failed to update user {userid}: {error}".format(userid=userid, error=e))
+            self.manageiq.module.fail_json(msg="Failed to update user {userid}: {error}".format(userid=userid, error=e))
+        self.changed = True
+        return dict(
+            changed=self.changed,
+            msg="Successfully updated the user {userid}: {user_details}".format(userid=userid, user_details=result))
 
     def create_user(self, userid, username, group_id, password, email):
         """Creates the user in manageiq.
@@ -183,17 +162,17 @@ class ManageIQUser(object):
             the created user id, name, created_on timestamp,
             updated_on timestamp, userid and current_group_id
         """
+        url = '{api_url}/users'.format(api_url=self.manageiq.api_url)
+        resource = {'userid': userid, 'name': username, 'password': password,
+                    'group': {'id': group_id}, 'email': email}
         try:
-            url = '{api_url}/users'.format(api_url=self.api_url)
-            resource = {'userid': userid, 'name': username, 'password': password,
-                        'group': {'id': group_id}, 'email': email}
-            result = self.client.post(url, action='create', resource=resource)
-            self.changed = True
-            return dict(
-                changed=self.changed,
-                msg="Successfully created the user {userid}: {user_details}".format(userid=userid, user_details=result['results']))
+            result = self.manageiq.client.post(url, action='create', resource=resource)
         except Exception as e:
-            self.module.fail_json(msg="Failed to create user {userid}: {error}".format(userid=userid, error=e))
+            self.manageiq.module.fail_json(msg="Failed to create user {userid}: {error}".format(userid=userid, error=e))
+        self.changed = True
+        return dict(
+            changed=self.changed,
+            msg="Successfully created the user {userid}: {user_details}".format(userid=userid, user_details=result['results']))
 
     def create_or_update_user(self, userid, username, password, group, email):
         """ Create or update a user in manageiq.
@@ -202,21 +181,22 @@ class ManageIQUser(object):
             Whether or not a change took place and a message describing the
             operation executed.
         """
-        group_id = self.find_group_by_name(group)
-        if not group_id:  # group doesn't exist
-            self.module.fail_json(
+        group = self.manageiq.find_collection_resource_by('groups', description=group)
+        if not group:  # group doesn't exist
+            self.manageiq.module.fail_json(
                 msg="Failed to create user {userid}: group {group_name} does not exist in manageiq".format(userid=userid, group_name=group))
 
-        user_id = self.find_user_by_userid(userid)
-        if user_id:  # user already exist
-            return self.update_user_if_required(user_id, userid, username, group_id, password, email)
+        user = self.manageiq.find_collection_resource_by('users', userid=userid)
+        if user:  # user already exist
+            return self.update_user_if_required(user, userid, username, group['id'], password, email)
         else:
-            return self.create_user(userid, username, group_id, password, email)
+            return self.create_user(userid, username, group['id'], password, email)
 
 
 def main():
     module = AnsibleModule(
         argument_spec=dict(
+            manageiq_utils.manageiq_argument_spec(),
             name=dict(required=True, type='str'),
             fullname=dict(required=False, type='str'),
             password=dict(required=False, type='str', no_log=True),
@@ -224,44 +204,29 @@ def main():
             email=dict(required=False, type='str'),
             state=dict(required=False, type='str',
                        choices=['present', 'absent'], defualt='present'),
-            miq_url=dict(default=os.environ.get('MIQ_URL', None)),
-            miq_username=dict(default=os.environ.get('MIQ_USERNAME', None)),
-            miq_password=dict(default=os.environ.get('MIQ_PASSWORD', None), no_log=True),
-            miq_verify_ssl=dict(require=False, type='bool', default=True),
-            ca_bundle_path=dict(required=False, type='str', defualt=None)
         ),
         required_if=[
             ('state', 'present', ['fullname', 'group', 'password'])
         ],
     )
 
-    for arg in ['miq_url', 'miq_username', 'miq_password']:
-        if module.params[arg] in (None, ''):
-            module.fail_json(msg="missing required argument: {}".format(arg))
+    name = module.params['name']
+    fullname = module.params['fullname']
+    password = module.params['password']
+    group = module.params['group']
+    email = module.params['email']
+    state = module.params['state']
 
-    miq_url        = module.params['miq_url']
-    miq_username   = module.params['miq_username']
-    miq_password   = module.params['miq_password']
-    miq_verify_ssl = module.params['miq_verify_ssl']
-    ca_bundle_path = module.params['ca_bundle_path']
-    name           = module.params['name']
-    fullname       = module.params['fullname']
-    password       = module.params['password']
-    group          = module.params['group']
-    email          = module.params['email']
-    state          = module.params['state']
-
-    manageiq = ManageIQUser(module, miq_url, miq_username, miq_password, miq_verify_ssl, ca_bundle_path)
+    manageiq = manageiq_utils.ManageIQ(module)
+    manageiq_user = ManageIQUser(manageiq)
     if state == "present":
-        res_args = manageiq.create_or_update_user(name, fullname, password,
-                                                  group, email)
+        res_args = manageiq_user.create_or_update_user(name, fullname,
+                                                       password, group, email)
     if state == "absent":
-        res_args = manageiq.delete_user(name)
+        res_args = manageiq_user.delete_user(name)
 
     module.exit_json(**res_args)
 
 
-# Import module bits
-from ansible.module_utils.basic import *
 if __name__ == "__main__":
     main()
