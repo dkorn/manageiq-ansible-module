@@ -69,6 +69,14 @@ Each assigned tag must be a part of a unique category.
 An example playbook [assign_tag.yml](examples/assign_tag.yml) is provided.  
 To unassign a tag from a resource change `state=absent`.
 
+### manageiq_alert module
+
+The `manageiq_alert` module supports adding, updating and deleting alerts in manageiq.  
+Example playbook [create_alert.yml](examples/create_alert.yml) is provided.  
+To update an existing alert pass the changed values together with the required parameters. To delete an alert change `state=absent`.
+Alert expression in ManageIQ can have one of two types: `miq_expression` (`MiqExpression`) or `hash`. By default the expression type is `miq_expression`, to change the type use the `expression_type` field.
+The following ManageIQ entities supports alerts: container_node, vm, host, storage, cluster, ems, miq_server and middleware_server.
+
 
 
 ## Using Environment Variables

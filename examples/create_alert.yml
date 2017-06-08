@@ -1,0 +1,23 @@
+---
+- hosts: localhost
+
+  tasks:
+  - name: Create an alert in ManageIQ
+    manageiq_alert:
+      miq_url: http://miq.example.com
+      miq_username: admin
+      miq_password: secret
+      miq_verify_ssl: false
+      description: Test Alert 01
+      options:
+        notifications:
+          delay_next_evaluation: 0
+          evm_event: {}
+      entity: container_node
+      expression:
+        eval_method: dwh_generic
+        mode: internal
+        options: {}
+      expression_type: hash
+      enabled: true
+      state: present
