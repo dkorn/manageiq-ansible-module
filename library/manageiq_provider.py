@@ -597,15 +597,36 @@ def main():
 
     if state == 'present':
         if provider_type in ("openshift-enterprise", "openshift-origin"):
-            endpoints = [manageiq.generate_auth_key_config('default', 'bearer', hostname, port, token, provider_verify_ssl, provider_ca_path)]
+            endpoints = [manageiq.generate_auth_key_config(role='default',
+                                                           authtype='bearer',
+                                                           hostname=hostname,
+                                                           port=port,
+                                                           token=token,
+                                                           provider_verify_ssl=provider_verify_ssl,
+                                                           provider_ca_path=provider_ca_path)]
             if monitoring:
                 monitoring_hostname =  module.params['monitoring_hostname']
                 monitoring_port = module.params['monitoring_port']
-                endpoints.append(manageiq.generate_auth_key_config(monitoring, monitoring, monitoring_hostname, monitoring_port, token, provider_verify_ssl, provider_ca_path))
+                endpoints.append(manageiq.generate_auth_key_config(role=monitoring,
+                                                                   authtype=monitoring,
+                                                                   hostname=monitoring_hostname,
+                                                                   port=monitoring_port,
+                                                                   token=token,
+                                                                   provider_verify_ssl=provider_verify_ssl,
+                                                                   provider_ca_path=provider_ca_path))
         elif provider_type == "amazon":
-            endpoints = [manageiq.generate_amazon_config('default', 'default', access_key_id, secret_access_key)]
+            endpoints = [manageiq.generate_amazon_config(role='default',
+                                                         authtype='default',
+                                                         userid=access_key_id,
+                                                         password=secret_access_key)]
         elif provider_type == "hawkular-datawarehouse":
-            endpoints = [manageiq.generate_auth_key_config('default', 'default', hostname, port, token, provider_verify_ssl, provider_ca_path)]
+            endpoints = [manageiq.generate_auth_key_config(role='default',
+                                                           authtype='default',
+                                                           hostname=hostname,
+                                                           port=port,
+                                                           token=token,
+                                                           provider_verify_ssl=provider_verify_ssl,
+                                                           provider_ca_path=provider_ca_path)]
 
         res_args = manageiq.add_or_update_provider(provider_name,
                                                    provider_type,

@@ -88,7 +88,7 @@ POST_RETURN_VALUES = {
 }
 
 GET_RETURN_VALUES = {
-    'openshift_without_metrics': {
+    'openshift_without_monitoring': {
         'zone_id': 1,
         'endpoints': [{
             'port': PROVIDER_PORT,
@@ -271,7 +271,6 @@ class AnsibleModuleFailed(Exception):
 
 @pytest.fixture()
 def miq(miq_api_class, miq_ansible_module, the_provider, the_amazon_provider, the_zone):
-    miq_ansible_module.params = {'metrics': True}
 
     def fail(msg):
         raise AnsibleModuleFailed(msg)
@@ -337,7 +336,7 @@ def test_filter_unsupported_fields_from_config(miq):
 
 def test_will_add_openshift_provider_if_none_present(miq, miq_api_class, openshift_endpoint):
     miq_api_class.return_value.collections.providers = []
-    miq_api_class.return_value.get.return_value = GET_RETURN_VALUES['openshift_without_metrics']
+    miq_api_class.return_value.get.return_value = GET_RETURN_VALUES['openshift_without_monitoring']
     miq_api_class.return_value.post.return_value = POST_RETURN_VALUES['openshift']
 
     res_args = miq.add_or_update_provider(
@@ -429,8 +428,8 @@ def test_will_add_hawkular_datawarehose_provider_if_none_present(miq, miq_api_cl
 def test_will_update_openshift_provider_if_present(miq, miq_api_class, openshift_endpoint, hawkular_endpoint, the_provider):
     miq_api_class.return_value.collections.providers = [the_provider]
     miq_api_class.return_value.get.side_effect = [
-        GET_RETURN_VALUES['openshift_without_metrics'],
-        GET_RETURN_VALUES['openshift_without_metrics'],
+        GET_RETURN_VALUES['openshift_without_monitoring'],
+        GET_RETURN_VALUES['openshift_without_monitoring'],
         GET_RETURN_VALUES['openshift_with_hawkular']
     ]
     miq_api_class.return_value.post.return_value = POST_RETURN_VALUES['openshift']
@@ -459,8 +458,8 @@ def test_will_update_openshift_provider_if_present(miq, miq_api_class, openshift
 def test_will_add_prometheus_endpoint_to_openshift_provider_if_present(miq, miq_api_class, openshift_endpoint, prometheus_endpoint, the_provider):
     miq_api_class.return_value.collections.providers = [the_provider]
     miq_api_class.return_value.get.side_effect = [
-        GET_RETURN_VALUES['openshift_without_metrics'],
-        GET_RETURN_VALUES['openshift_without_metrics'],
+        GET_RETURN_VALUES['openshift_without_monitoring'],
+        GET_RETURN_VALUES['openshift_without_monitoring'],
         GET_RETURN_VALUES['openshift_with_prometheus']
     ]
     miq_api_class.return_value.post.return_value = POST_RETURN_VALUES['openshift']
