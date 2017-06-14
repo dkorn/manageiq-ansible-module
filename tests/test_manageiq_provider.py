@@ -25,6 +25,8 @@ HAWK_DW_PROVIDER_PORT = 443
 PROVIDER_ID = 134
 HAWKULAR_HOSTNAME = "some-hawkular-hostname.tld"
 HAWKULAR_PORT = 443
+PROMETHEUS_HOSTNAME = "some-prometheus-hostname.tld"
+PROMETHEUS_PORT = 80
 MANAGEIQ_HOSTNAME = "http://themanageiq.tld"
 
 
@@ -86,7 +88,7 @@ POST_RETURN_VALUES = {
 }
 
 GET_RETURN_VALUES = {
-    'openshift_without_hawkular': {
+    'openshift_without_monitoring': {
         'zone_id': 1,
         'endpoints': [{
             'port': PROVIDER_PORT,
@@ -121,6 +123,34 @@ GET_RETURN_VALUES = {
         ],
         'authentications': [
             {'authtype': 'hawkular',
+             'updated_on': '2020-09-22T12:58:30Z',
+             'status': 'Valid',
+             'status_details': 'Ok',
+             'last_valid_on': '2020-09-22T12:59:30Z'},
+            {'authtype': 'bearer',
+             'updated_on': '2020-09-22T11:58:30Z',
+             'status': 'Valid',
+             'status_details': 'Ok',
+             'last_valid_on': '2020-09-22T11:00:30Z'}]
+    },
+    'openshift_with_prometheus': {
+        'zone_id': 1,
+        'endpoints': [
+            {'port': PROVIDER_PORT,
+             'role': 'default',
+             'hostname': PROVIDER_HOSTNAME,
+            'verify_ssl': PROVIDER_VERIFY_SSL,
+            'certificate_authority': None,
+            'security_protocol': 'ssl-without-validation'},
+            {'port': PROMETHEUS_PORT,
+             'role': 'prometheus',
+             'hostname': PROMETHEUS_HOSTNAME,
+            'verify_ssl': PROVIDER_VERIFY_SSL,
+            'certificate_authority': None,
+            'security_protocol': 'ssl-without-validation'}
+        ],
+        'authentications': [
+            {'authtype': 'prometheus',
              'updated_on': '2020-09-22T12:58:30Z',
              'status': 'Valid',
              'status_details': 'Ok',
@@ -213,6 +243,13 @@ def hawkular_endpoint(miq):
 
 
 @pytest.fixture
+def prometheus_endpoint(miq):
+    yield [
+        miq.generate_auth_key_config("prometheus", "prometheus", PROMETHEUS_HOSTNAME,
+                                     PROMETHEUS_PORT, PROVIDER_TOKEN,
+                                     PROVIDER_VERIFY_SSL, PROVIDER_CA_PATH)]
+
+@pytest.fixture
 def amazon_endpoint(miq):
     yield [
         miq.generate_amazon_config("default", "default", userid=AMAZON_USERID,
@@ -234,7 +271,6 @@ class AnsibleModuleFailed(Exception):
 
 @pytest.fixture()
 def miq(miq_api_class, miq_ansible_module, the_provider, the_amazon_provider, the_zone):
-    miq_ansible_module.params = {'metrics': True}
 
     def fail(msg):
         raise AnsibleModuleFailed(msg)
@@ -300,7 +336,7 @@ def test_filter_unsupported_fields_from_config(miq):
 
 def test_will_add_openshift_provider_if_none_present(miq, miq_api_class, openshift_endpoint):
     miq_api_class.return_value.collections.providers = []
-    miq_api_class.return_value.get.return_value = GET_RETURN_VALUES['openshift_without_hawkular']
+    miq_api_class.return_value.get.return_value = GET_RETURN_VALUES['openshift_without_monitoring']
     miq_api_class.return_value.post.return_value = POST_RETURN_VALUES['openshift']
 
     res_args = miq.add_or_update_provider(
@@ -392,8 +428,8 @@ def test_will_add_hawkular_datawarehose_provider_if_none_present(miq, miq_api_cl
 def test_will_update_openshift_provider_if_present(miq, miq_api_class, openshift_endpoint, hawkular_endpoint, the_provider):
     miq_api_class.return_value.collections.providers = [the_provider]
     miq_api_class.return_value.get.side_effect = [
-        GET_RETURN_VALUES['openshift_without_hawkular'],
-        GET_RETURN_VALUES['openshift_without_hawkular'],
+        GET_RETURN_VALUES['openshift_without_monitoring'],
+        GET_RETURN_VALUES['openshift_without_monitoring'],
         GET_RETURN_VALUES['openshift_with_hawkular']
     ]
     miq_api_class.return_value.post.return_value = POST_RETURN_VALUES['openshift']
@@ -417,6 +453,38 @@ def test_will_update_openshift_provider_if_present(miq, miq_api_class, openshift
             'Updated': {}
         }
     }
+
+# todo: add validation to this test once manageiq supports prometheus validation
+def test_will_add_prometheus_endpoint_to_openshift_provider_if_present(miq, miq_api_class, openshift_endpoint, prometheus_endpoint, the_provider):
+    miq_api_class.return_value.collections.providers = [the_provider]
+    miq_api_class.return_value.get.side_effect = [
+        GET_RETURN_VALUES['openshift_without_monitoring'],
+        GET_RETURN_VALUES['openshift_without_monitoring'],
+        GET_RETURN_VALUES['openshift_with_prometheus']
+    ]
+    miq_api_class.return_value.post.return_value = POST_RETURN_VALUES['openshift']
+
+    openshift_endpoint.extend(prometheus_endpoint)
+    res_args = miq.add_or_update_provider(
+        PROVIDER_NAME, "openshift-origin", openshift_endpoint,
+        "default", None)
+    assert res_args == {
+        'changed': True,
+        'msg': "Successful update of {} provider. Authentication: {{}}. Refreshing provider inventory".format(PROVIDER_NAME),
+        'provider_id': PROVIDER_ID,
+        'updates': {
+            'Added': {
+                'prometheus': {'hostname': 'some-prometheus-hostname.tld', 'port': 80,
+                               'certificate_authority': None,
+                               'verify_ssl': False,
+                               'security_protocol': 'ssl-without-validation'}
+            },
+            'Removed': {},
+            'Updated': {}
+        }
+    }
+
+
 
 
 def test_will_update_amazon_provider_if_present(miq, miq_api_class, amazon_endpoint, the_amazon_provider):

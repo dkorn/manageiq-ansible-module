@@ -89,20 +89,20 @@ options:
       - to remove a previously defined ca pass null or omit
     required: false
     default: null
-  metrics:
+  monitoring:
     description:
-      - whether metrics should be enabled in the provider
-    required: false
-    default: False
-    choices: ['True', 'False']
-  hawkular_hostname:
-    description:
-      - the hostname used for hawkular metrics
+      - type of monitoring endpoint to create, if any
     required: false
     default: null
-  hawkular_port:
+    choices: ['hawkular', 'prometheus', null]
+  monitoring_hostname:
     description:
-      - the port used for hawkular metrics
+      - the hostname used for monitoring endpoint
+    required: false
+    default: null
+  monitoring_port:
+    description:
+      - the port used for monitoring endpoint
     required: false
     default: null
   validate_provider_auth:
@@ -132,9 +132,27 @@ EXAMPLES = '''
     provider_api_auth_token: '******'
     miq_verify_ssl: false
     provider_verify_ssl: false
-    metrics: True
-    hawkular_hostname: 'hawkular01.redhat.com'
-    hawkular_port: '443'
+    monitoring: hawkular
+    monitoring_hostname: 'hawkular01.redhat.com'
+    monitoring_port: '443'
+
+# Add Openshift Containers Provider to ManageIQ with prometheus
+  manageiq_provider:
+    name: 'Molecule'
+    provider_type: 'openshift-enterprise'
+    state: 'present'
+    miq_url: 'http://miq.example.com'
+    miq_username: 'admin'
+    miq_password: '******'
+    zone: 'default'
+    provider_api_hostname: 'oshift01.redhat.com'
+    provider_api_port: '8443'
+    provider_api_auth_token: '******'
+    miq_verify_ssl: false
+    provider_verify_ssl: false
+    monitoring: 'prometheus'
+    monitoring_hostname: 'prometheus01.redhat.com'
+    monitoring_port: '80'
 
 # Remove Openshift Provider from HTTPS ManageIQ environment
   manageiq_provider:
@@ -484,7 +502,9 @@ class ManageIQProvider(object):
             authtypes_to_verify = []
             for e in endpoints:
                 if e['endpoint']['role'] in roles_with_changes:
-                    authtypes_to_verify.append(e['authentication']['authtype'])
+                    # todo: Temporary hack. Remove this line when manageiq supports prometheus validation
+                    if e['authentication']['authtype'] != 'prometheus':
+                        authtypes_to_verify.append(e['authentication']['authtype'])
             result, details = self.verify_authenticaion_validation(provider_id, old_validation_details, authtypes_to_verify)
         else:
             result = "Skipped Validation"
@@ -531,16 +551,18 @@ def main():
             provider_region=dict(required=False, type='str'),
             access_key_id=dict(required=False, type='str', no_log=True),
             secret_access_key=dict(required=False, type='str', no_log=True),
-            metrics=dict(required=False, type='bool', default=False),
-            hawkular_hostname=dict(required=False),
-            hawkular_port=dict(required=False),
+            monitoring=dict(required=False, default=None,
+                       choices=['hawkular', 'prometheus', None]),
+            monitoring_hostname=dict(required=False),
+            monitoring_port=dict(required=False),
             initiate_refresh=dict(required=False, type='bool', default=True),
             validate_provider_auth=dict(required=False, type='bool', default=True)
         ),
         required_if=[
             ('provider_type', 'openshift-origin', ['provider_api_hostname', 'provider_api_port', 'provider_api_auth_token']),
             ('provider_type', 'openshift-enterprise', ['provider_api_hostname', 'provider_api_port', 'provider_api_auth_token']),
-            ('metrics', True, ['hawkular_hostname', 'hawkular_port']),
+            ('monitoring', 'hawkular', ['monitoring_hostname', 'monitoring_port']),
+            ('monitoring', 'prometheus', ['monitoring_hostname', 'monitoring_port']),
             ('provider_type', 'amazon', ['access_key_id', 'secret_access_key', 'provider_region']),
             ('provider_type', 'hawkular-datawarehouse', ['provider_api_hostname', 'provider_api_port', 'provider_api_auth_token'])
         ],
@@ -567,8 +589,7 @@ def main():
     hostname                    = module.params['provider_api_hostname']
     port                        = module.params['provider_api_port']
     token                       = module.params['provider_api_auth_token']
-    h_hostname                  = module.params['hawkular_hostname']
-    h_port                      = module.params['hawkular_port']
+    monitoring                  = module.params['monitoring']
     validate_provider_auth      = module.params['validate_provider_auth']
     initiate_refresh            = module.params['initiate_refresh']
 
@@ -576,13 +597,36 @@ def main():
 
     if state == 'present':
         if provider_type in ("openshift-enterprise", "openshift-origin"):
-            endpoints = [manageiq.generate_auth_key_config('default', 'bearer', hostname, port, token, provider_verify_ssl, provider_ca_path)]
-            if module.params['metrics']:
-                endpoints.append(manageiq.generate_auth_key_config('hawkular', 'hawkular', h_hostname, h_port, token, provider_verify_ssl, provider_ca_path))
+            endpoints = [manageiq.generate_auth_key_config(role='default',
+                                                           authtype='bearer',
+                                                           hostname=hostname,
+                                                           port=port,
+                                                           token=token,
+                                                           provider_verify_ssl=provider_verify_ssl,
+                                                           provider_ca_path=provider_ca_path)]
+            if monitoring:
+                monitoring_hostname =  module.params['monitoring_hostname']
+                monitoring_port = module.params['monitoring_port']
+                endpoints.append(manageiq.generate_auth_key_config(role=monitoring,
+                                                                   authtype=monitoring,
+                                                                   hostname=monitoring_hostname,
+                                                                   port=monitoring_port,
+                                                                   token=token,
+                                                                   provider_verify_ssl=provider_verify_ssl,
+                                                                   provider_ca_path=provider_ca_path))
         elif provider_type == "amazon":
-            endpoints = [manageiq.generate_amazon_config('default', 'default', access_key_id, secret_access_key)]
+            endpoints = [manageiq.generate_amazon_config(role='default',
+                                                         authtype='default',
+                                                         userid=access_key_id,
+                                                         password=secret_access_key)]
         elif provider_type == "hawkular-datawarehouse":
-            endpoints = [manageiq.generate_auth_key_config('default', 'default', hostname, port, token, provider_verify_ssl, provider_ca_path)]
+            endpoints = [manageiq.generate_auth_key_config(role='default',
+                                                           authtype='default',
+                                                           hostname=hostname,
+                                                           port=port,
+                                                           token=token,
+                                                           provider_verify_ssl=provider_verify_ssl,
+                                                           provider_ca_path=provider_ca_path)]
 
         res_args = manageiq.add_or_update_provider(provider_name,
                                                    provider_type,

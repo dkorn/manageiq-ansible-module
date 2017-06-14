@@ -2,7 +2,7 @@
 - hosts: localhost
 
   tasks:
-  - name: Add Openshift Containers Provider to ManageIQ
+  - name: Add Openshift Containers Provider with Hawkular endpoint to ManageIQ
     manageiq_provider:
       name: 'Openshift01'
       provider_type: 'openshift-origin'
@@ -10,9 +10,28 @@
       provider_api_hostname: 'os01.example.com'
       provider_api_port: '8443'
       provider_api_auth_token: '******'
-      metrics: true
-      hawkular_hostname: 'hawkular01.example.com'
-      hawkular_port: '443'
+      monitoring: 'hawkular'
+      monitoring_hostname: 'hawkular01.example.com'
+      monitoring_port: '443'
+      miq_url: 'http://miq.example.com'
+      miq_username: 'admin'
+      miq_password: '******'
+      miq_verify_ssl: false
+      provider_verify_ssl: false
+    register: result
+  - debug: var=result
+
+  - name: Add Openshift Containers Provider with Prometheus endpoint to ManageIQ
+    manageiq_provider:
+      name: 'Openshift02'
+      provider_type: 'openshift-origin'
+      state: 'present'
+      provider_api_hostname: 'os02.example.com'
+      provider_api_port: '8443'
+      provider_api_auth_token: '******'
+      monitoring: 'prometheus'
+      monitoring_hostname: 'prometheus01.example.com'
+      monitoring_port: '80'
       miq_url: 'http://miq.example.com'
       miq_username: 'admin'
       miq_password: '******'
