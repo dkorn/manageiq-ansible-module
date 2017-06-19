@@ -1,0 +1,49 @@
+---
+g_miq_url: 'http://example.com:3000'
+g_miq_username: 'admin'
+g_miq_password: '*****'
+#podified_prometheus_hostname: prometheus.kube-system.svc.cluster.local
+
+users:
+  - name: dkorn
+    full_name: Daniel Korn
+    password: 123
+    group: EvmGroup-user
+  - name: cben
+    full_name: Beni Pesch
+    password: 456
+    group: EvmGroup-user
+  - name: zgalor
+    full_name: Zohar Galor
+    password: 789
+    group: EvmGroup-user
+
+openshift_providers:
+  - name: openshift01
+    type: openshift-origin
+    zone: default
+    hostname: openshift.master.example.com
+    port: 8443
+    token: 'secret'
+    monitoring: 'prometheus'
+    monitoring_hostname: 'prometheus.example.com'
+    monitoring_port: 8443
+    custom_attributes:
+    - name: Expire Date
+      value: '2017-08-28'
+      field_type: Date
+    - name: Customer Account ID
+      value: AKIAIEY7GHEUGVHOHCAA
+    - name: Number of Expected Nodes
+      value: 2
+    - name: Cluster ID
+      value: ba83b725-089d
+    - name: Customer Name
+      value: Russell Westbrook
+
+      #amazon_providers:
+      #  - name: aws01
+      #    type: amazon
+      #    region: us-west-1
+      #    access_key_id: example
+      #    secret_access_key: secret

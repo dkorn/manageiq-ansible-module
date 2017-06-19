@@ -1,0 +1,75 @@
+---
+- hosts: localhost
+  vars_files:
+  - cm_ops_vars.yml
+  tasks:
+  - name: Create Operator users in ManageIQ
+    with_items: "{{ users }}"
+    manageiq_user:
+      name: "{{ item.name }}"
+      state: "{{state | default('present')}}"
+      fullname: "{{ item.full_name }}"
+      password: "{{ item.password }}"
+      group: "{{ item.group }}"
+      miq_url: "{{ g_miq_url }}"
+      miq_username: "{{ g_miq_username }}"
+      miq_password: "{{ g_miq_password }}"
+      miq_verify_ssl: false
+    register: result
+
+  - debug: var=result
+
+  - name: Add Amazon EC2 Provider to ManageIQ
+    with_items: "{{ amazon_providers|default([]) }}"
+    manageiq_provider:
+      name: "{{ item.name }}"
+      state: "{{state | default('present')}}"
+      provider_type: "{{ item.type }}"
+      provider_region: "{{ item.region }}"
+      access_key_id: "{{ item.access_key_id }}"
+      secret_access_key: "{{ item.secret_access_key }}"
+      miq_url: "{{ g_miq_url }}"
+      miq_username: "{{ g_miq_username }}"
+      miq_password: "{{ g_miq_password }}"
+      miq_verify_ssl: false
+    register: result
+
+  - debug: var=result
+
+  - name: Add Openshift Containers Providers to ManageIQ
+    with_items: "{{ openshift_providers }}"
+    manageiq_provider:
+      name: "{{ item.name }}"
+      provider_type: "{{ item.type }}"
+      state: "{{state | default('present')}}"
+      zone: "{{ item.zone }}"
+      provider_api_hostname: "{{ item.hostname }}"
+      provider_api_port: "{{ item.port }}"
+      provider_api_auth_token: "{{ item.token }}"
+      monitoring: "{{ item.monitoring }}"
+      monitoring_hostname: "{{ item.monitoring_hostname }}"
+      monitoring_port: "{{ item.monitoring_port }}"
+      miq_url: "{{ g_miq_url }}"
+      miq_username: "{{ g_miq_username }}"
+      miq_password: "{{ g_miq_password }}"
+      miq_verify_ssl: false
+      provider_verify_ssl: false
+    register: result
+
+  - debug: var=result
+
+  - name: Add Custom Attributes to Openshift Providers in ManageIQ
+    with_items: "{{ openshift_providers }}"
+    manageiq_custom_attributes:
+      entity_type: "provider"
+      entity_name: "{{ item.name }}"
+      state: "{{state | default('present')}}"
+      custom_attributes: "{{ item.custom_attributes }}"
+      miq_url: "{{ g_miq_url }}"
+      miq_username: "{{ g_miq_username }}"
+      miq_password: "{{ g_miq_password }}"
+      miq_verify_ssl: false
+    register: result
+
+  - debug: var=result
+
