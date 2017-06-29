@@ -32,7 +32,7 @@ To view a module documentation execute:
 
 ### manageiq_provider module
 
-The `manageiq_provider` module currently supports adding, updating and deleting OpenShift, Amazon EC2 and Hawkular Datawarehouse providers to manageiq.  
+The `manageiq_provider` module currently supports adding, updating and deleting OpenShift, Amazon EC2 and Hawkular Datawarehouse providers to manageiq.  Addtioinally it supports pulling v2 key from another appliance and joining an appliance to an existing region.
 Example playbooks [add_openshift_provider.yml](examples/add_openshift_provider.yml), [add_amazon_provider.yml](examples/add_amazon_provider.yml) and [add_hawkular_datawarehouse_provider.yml](examples/add_hawkular_datawarehouse_provider.yml) are provided.
 To update an existing provider pass the changed values together with the required parameters. To delete a provider change `state=absent`.  
 SSL verification for HTTPS requests between ManageIQ and the provider is enabled by default. To ignore pass `provider_verify_ssl: false`.
@@ -77,7 +77,11 @@ To update an existing alert pass the changed values together with the required p
 Alert expression in ManageIQ can have one of two types: `miq_expression` (`MiqExpression`) or `hash`. By default the expression type is `miq_expression`, to change the type use the `expression_type` field.
 The following ManageIQ entities supports alerts: container_node, vm, host, storage, cluster, ems, miq_server and middleware_server.
 
+### manageiq_fetch_key
+The `manageiq_fetch_key` module supports pulling v2 key from a source ManageIQ appliance.
 
+### manageiq_join_region
+The `manageiq_join_region` module supports joining a ManageIQ appliance to an existing ManageIQ region.
 
 ## Using Environment Variables
 
