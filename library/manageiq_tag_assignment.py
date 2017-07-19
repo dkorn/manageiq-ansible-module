@@ -139,7 +139,7 @@ class ManageIQTagAssignment(object):
             if result['success']:
                 self.changed = True
             else:
-                self.module.fail_json(msg="Failed to {action}: {fail_message}".format(action=action, entity=entity, fail_message=result['message']))
+                self.module.fail_json(msg="Failed to {action}: {fail_message}".format(action=action, fail_message=result['message']))
 
     def full_tag_name(self, tag):
         """ Returns the full tag name in manageiq
