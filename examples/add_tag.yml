@@ -1,0 +1,17 @@
+---
+- hosts: localhost
+  tasks:
+  - manageiq_tag_assignment:
+      miq_password: '******'
+      miq_url: 'http://miq.example.com'
+      miq_username: 'admin'
+      miq_verify_ssl: false
+      resource: provider
+      resource_name: openshift_provider
+      state: present
+      tags:
+      - {category: environment, name: qa}
+      - {category: department, name: accounting}
+    name: Create a tag in ManageIQ
+    register: result
+  - {debug: var=result}
