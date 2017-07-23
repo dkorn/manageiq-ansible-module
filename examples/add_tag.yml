@@ -10,8 +10,8 @@
       resource_name: openshift_provider
       state: present
       tags:
-      - {category: environment, name: qa}
-      - {category: department, name: accounting}
+      - category: environment, name: qa
+      - category: department, name: accounting
     name: Create a tag in ManageIQ
     register: result
-  - {debug: var=result}
+  - debug: var=result
