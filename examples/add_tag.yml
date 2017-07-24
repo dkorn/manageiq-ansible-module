@@ -2,7 +2,7 @@
 - hosts: localhost
   tasks:
   - manageiq_tag_assignment:
-      miq_password: ******
+      miq_password: '******'
       miq_url: https://miq.example.com
       miq_username: admin
       miq_verify_ssl: false
