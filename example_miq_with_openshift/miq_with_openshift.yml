@@ -1,0 +1,127 @@
+---
+- hosts: localhost
+  tasks:
+
+    - name: ManageIQ container
+      docker_container:
+        name: miq
+        state: started
+        image: "{{ miq_image | default('docker.io/manageiq/manageiq')}}:{{ miq_version | default('latest') }}"
+        privileged: true  # MIQ image requires this, I heard?
+        network_mode: bridge
+        ports:
+          - 3000  # direct puma, bypasses apache
+          - 80
+          - 443
+        # TODO: persisent db volume?  is it automatic?
+      register: miq_container
+
+    - name: Openshift container
+      # https://docs.openshift.org/latest/getting_started/administrators.html#running-in-a-docker-container
+      docker_container:
+        name: openshift
+        state: started
+        image: "{{ openshift_image | default('docker.io/openshift/origin') }}:{{ openshift_version | default('latest') }}"
+        command: "start"
+        privileged: true
+        pid_mode: host
+        # TODO: Is it usable in `network_mode: bridge`?  The above doc says to use `host`.
+        #   Don't know how to connect bridge miq container to a host container, this was easier.
+        network_mode: bridge
+        volumes:
+          - /:/rootfs:ro
+          - /var/run:/var/run:rw
+          - /sys:/sys
+          - /var/lib/docker:/var/lib/docker:rw
+          - /var/lib/origin/openshift.local.volumes:/var/lib/origin/openshift.local.volumes
+      register: openshift_container
+
+    - name: Add containers to inventory
+      add_host:
+        name: "{{ item }}"
+        ansible_connection: docker
+      with_items: [miq, openshift]
+
+    # Direct access to docker_container output facts is apparently broken -
+    # https://github.com/ansible/ansible/issues/18461
+    # and setup for docker "hosts" only discovers IP for miq but not openshift (?).
+    # So just using `docker inspect`...
+
+    - name: "Get miq container IP"
+      command: >
+        {%raw%}
+        docker inspect --format={{.NetworkSettings.Networks.bridge.IPAddress}} miq
+        {%endraw%}
+      changed_when: false
+      register: miq_inspect
+
+    - name: "Get openshift container IP"
+      command: >
+        {%raw%}
+        docker inspect --format={{.NetworkSettings.Networks.bridge.IPAddress}} openshift
+        {%endraw%}
+      changed_when: false
+      register: openshift_inspect
+
+    - set_fact:
+        miq_ip: "{{ miq_inspect.stdout }}"
+        openshift_ip: "{{ openshift_inspect.stdout }}"
+
+    - name: Wait for OpenShift API to be up before configuring it
+      wait_for:
+        host: "{{ openshift_ip }}"
+        port: 8443
+
+# https://access.redhat.com/documentation/en/red-hat-cloudforms/4.0/paged/managing-providers/chapter-3-containers-providers#configuring_service_accounts
+- hosts: openshift
+  vars:
+    openshift:
+      common:
+        version_gte_3_1_or_1_1: true
+        version_gte_3_2_or_1_2: true # TODO var/autodetect
+        client_binary: oc
+        config_base: /var/lib/origin/openshift.local.config
+
+  roles:
+    # Configure service accounts & permissions in OpenShift
+    - openshift_manageiq
+
+  post_tasks:
+
+    - name: Get access token
+      # The inner command lists secret names, e.g. `management-admin-token-ywa06`.
+      # If there are many `head -n 1` picks an arbitrary one.
+      # The outer command extracts the token.
+      shell: >
+        {%raw%}
+        oc get -n management-infra secrets
+        $(oc get -n management-infra sa/management-admin --template='{{range .secrets}}{{printf "%s\n" .name}}{{end}}' | grep management-admin-token | head -n 1)
+        --template='{{.data.token}}' | base64 -d
+        {%endraw%}
+      no_log: true
+      register: access_token
+
+- hosts: localhost
+  tasks:
+
+    - name: Wait for ManageIQ API to be up before configuring it
+      wait_for:
+        host: "{{ miq_ip }}"
+        port: 443
+
+    - name: Add Openshift Containers Provider to ManageIQ
+      manageiq_provider:
+        name: Openshift container
+        state: present
+        provider_type: openshift-origin  # TODO openshift-enterpries
+        miq_url: "https://{{ miq_ip }}"
+        verify_ssl: false
+        miq_username: admin
+        miq_password: smartvm
+        provider_api_hostname: "{{ openshift_ip }}"
+        provider_api_auth_token: "{{ hostvars.openshift.access_token.stdout }}"
+        # TODO metrics:, hawkular_hostname:, hawkular_port:
+      register: miq_provider
+
+    - debug:
+        msg: "Openshift url: https://{{ openshift_ip }}:8433 | ManageIQ url: https://{{ miq_ip }}"
