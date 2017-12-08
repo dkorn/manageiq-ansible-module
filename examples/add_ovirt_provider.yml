@@ -1,0 +1,19 @@
+---
+- hosts: localhost
+
+  tasks:
+  - name: Add RHEV or ovirt provider to ManageIQ
+    manageiq_provider:
+      name: 'RHEV01'
+      provider_type: 'ovirt'
+      state: 'present'
+      provider_api_hostname: 'https://rhev.example.com'
+      provider_api_user: 'admin@internal'
+      provider_api_password: '******'
+      miq_url: 'http://miq.example.com'
+      miq_username: 'admin'
+      miq_password: '******'
+      miq_verify_ssl: false
+    register: result
+
+  - debug: var=result

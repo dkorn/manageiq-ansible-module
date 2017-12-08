@@ -46,7 +46,7 @@ options:
     description:
       - the provider's type
     required: true
-    choices: ['openshift-origin', 'openshift-enterprise', 'amazon', 'hawkular-datawarehouse']
+    choices: ['openshift-origin', 'openshift-enterprise', 'amazon', 'hawkular-datawarehouse', 'ovirt']
   state:
     description:
       - the state of the provider
@@ -64,6 +64,16 @@ options:
   provider_api_hostname:
     description:
       - the provider API hostname
+    required: true
+    default: null
+  provider_api_user:
+    description:
+      - the provider API username
+    required: true
+    default: null
+  provider_api_password:
+    description:
+      - the provider API password
     required: true
     default: null
   provider_api_port:
@@ -119,6 +129,19 @@ options:
 
 EXAMPLES = '''
 # Add Openshift Containers Provider to ManageIQ
+  manageiq_provider:
+    name: 'RHEV01'
+    provider_type: 'ovirt'
+    state: 'present'
+    miq_url: 'http://miq.example.com'
+    provider_api_user: 'admin@internal'
+    provider_api_password: '******'
+    provider_api_hostname: 'rhev01.redhat.com'
+    miq_username: 'admin'
+    miq_password: '******'
+    miq_verify_ssl: false
+    provider_verify_ssl: false
+
   manageiq_provider:
     name: 'Molecule'
     provider_type: 'openshift-enterprise'
@@ -211,6 +234,7 @@ class ManageIQProvider(object):
     OPENSHIFT_DEFAULT_PORT = '8443'
 
     PROVIDER_TYPES = {
+        'ovirt': "ManageIQ::Providers::Redhat::InfraManager",
         'openshift-origin': 'ManageIQ::Providers::Openshift::ContainerManager',
         'openshift-enterprise': 'ManageIQ::Providers::OpenshiftEnterprise::ContainerManager',
         'amazon': 'ManageIQ::Providers::Amazon::CloudManager',
@@ -411,6 +435,13 @@ class ManageIQProvider(object):
 
         return config
 
+    def generate_ovirt_config(self, role, authtype, userid, password):
+        """ Returns an ovirt provider endpoint dictionary.
+        """
+        return {'endpoint': {'role': role},
+                'authentication': {'authtype': authtype, 'userid': userid,
+                                   'password': password}}
+
     def generate_amazon_config(self, role, authtype, userid, password):
         """ Returns an amazon provider endpoint dictionary.
         """
@@ -543,6 +574,8 @@ def main():
             provider_api_port=dict(default=ManageIQProvider.OPENSHIFT_DEFAULT_PORT,
                                    required=False),
             provider_api_hostname=dict(required=False),
+            provider_api_user=dict(required=False),
+            provider_api_password=dict(required=False, no_log=True),
             provider_api_auth_token=dict(required=False, no_log=True),
             miq_verify_ssl=dict(require=False, type='bool', default=True),
             ca_bundle_path=dict(required=False, type='str', defualt=None),
@@ -559,6 +592,7 @@ def main():
             validate_provider_auth=dict(required=False, type='bool', default=True)
         ),
         required_if=[
+            ('provider_type', 'ovirt', ['provider_api_hostname', 'provider_api_user', 'provider_api_password']),
             ('provider_type', 'openshift-origin', ['provider_api_hostname', 'provider_api_port', 'provider_api_auth_token']),
             ('provider_type', 'openshift-enterprise', ['provider_api_hostname', 'provider_api_port', 'provider_api_auth_token']),
             ('monitoring', 'hawkular', ['monitoring_hostname', 'monitoring_port']),
@@ -587,6 +621,8 @@ def main():
     access_key_id               = module.params['access_key_id']
     secret_access_key           = module.params['secret_access_key']
     hostname                    = module.params['provider_api_hostname']
+    userid                      = module.params['provider_api_user']
+    password                    = module.params['provider_api_password']
     port                        = module.params['provider_api_port']
     token                       = module.params['provider_api_auth_token']
     monitoring                  = module.params['monitoring']
@@ -614,6 +650,11 @@ def main():
                                                                    token=token,
                                                                    provider_verify_ssl=provider_verify_ssl,
                                                                    provider_ca_path=provider_ca_path))
+        elif provider_type == "ovirt":
+            endpoints = [manageiq.generate_ovirt_config(role='default',
+                                                         hostname='provider_api_hostname',
+                                                         userid=provider_api_user,
+                                                         password=provider_api_password)]
         elif provider_type == "amazon":
             endpoints = [manageiq.generate_amazon_config(role='default',
                                                          authtype='default',
