@@ -1,3 +1,16 @@
+# OBSOLETE — Upstreaming into Ansible itself
+
+This repository is no longer maintained.
+Instead, most of this functionality was upsteamed into <https://github.com/ansible/ansible>.
+If you want to contribute, please send PRs to Ansible itself (and we'll help review).
+
+As a result of the upstream reviews, the new modules in Ansible have different interface, so you'll need to rewrite your playbooks.
+There is no clear plan for smooth transition or mixed usage; see https://github.com/dkorn/manageiq-ansible-module/issues/85 for the main differences.
+Don't hesitate to ask questions - on that issue, on <http://talk.manageiq.org/> and chat <https://gitter.im/ManageIQ/api>.
+
+----
+
+
 # manageiq-ansible-module
 
 [![travis image][]][travis status]
@@ -32,6 +45,8 @@ To view a module documentation execute:
 
 ### manageiq_provider module
 
+**Replacement**: upstream https://docs.ansible.com/ansible/devel/manageiq_provider_module.html
+
 The `manageiq_provider` module currently supports adding, updating and deleting OpenShift, Amazon EC2 and Hawkular Datawarehouse providers to manageiq.  
 Example playbooks [add_openshift_provider.yml](examples/add_openshift_provider.yml), [add_amazon_provider.yml](examples/add_amazon_provider.yml) and [add_hawkular_datawarehouse_provider.yml](examples/add_hawkular_datawarehouse_provider.yml) are provided.
 To update an existing provider pass the changed values together with the required parameters. To delete a provider change `state=absent`.  
@@ -42,11 +57,15 @@ If all authentications are valid the provider's inventory is refreshed.
 
 ### manageiq_user module
 
+**Upstream replacement:** https://docs.ansible.com/ansible/devel/manageiq_user_module.html
+
 The `manageiq_user` module supports adding, updating and deleting users in manageiq.  
 Example playbook [create_user.yml](examples/create_user.yml) is provided.  
 To update an existing user pass the changed values together with the required parameters. To delete a user change `state=absent`.
 
 ### manageiq_policy_assignment module
+
+**Upstream replacement:** https://docs.ansible.com/ansible/devel/manageiq_policies_module.html
 
 The `manageiq_policy_assignment` module currently supports assigning and unassigning Policies and Policy Profiles on resources in manageiq.  
 An example playbook [assign_policy.yml](examples/assign_policy.yml) is provided.  
@@ -63,6 +82,8 @@ It is possible to add a date type custom attributes by specifying `field_type: "
 
 ### manageiq_tag_assignment module
 
+**Upstream replacement:** https://docs.ansible.com/ansible/devel/manageiq_tags_module.html
+
 The `manageiq_tag_assignment` module currently supports assigning and unassigning tags on resources in manageiq.  
 List of supprted entities for tag assignment can be found in the [ManageIQ REST API docs](http://manageiq.org/docs/reference/latest/api/reference/tagging)  
 Each assigned tag must be a part of a unique category.  
@@ -70,6 +91,8 @@ An example playbook [assign_tag.yml](examples/assign_tag.yml) is provided.
 To unassign a tag from a resource change `state=absent`.
 
 ### manageiq_alert module
+
+**Upstream replacements WIP:** https://github.com/ansible/ansible/pull/32136, https://github.com/ansible/ansible/pull/32354
 
 The `manageiq_alert` module supports adding, updating and deleting alerts in manageiq.  
 Example playbook [create_alert.yml](examples/create_alert.yml) is provided.  
