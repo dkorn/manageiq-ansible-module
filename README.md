@@ -45,7 +45,7 @@ To view a module documentation execute:
 
 ### manageiq_provider module
 
-**Upstream replacement:** https://docs.ansible.com/ansible/devel/manageiq_provider_module.html
+**Upstream replacement:** https://docs.ansible.com/ansible/devel/module_docs/manageiq_provider_module.html
 
 The `manageiq_provider` module currently supports adding, updating and deleting OpenShift, Amazon EC2 and Hawkular Datawarehouse providers to manageiq.  
 Example playbooks [add_openshift_provider.yml](examples/add_openshift_provider.yml), [add_amazon_provider.yml](examples/add_amazon_provider.yml) and [add_hawkular_datawarehouse_provider.yml](examples/add_hawkular_datawarehouse_provider.yml) are provided.
@@ -57,7 +57,7 @@ If all authentications are valid the provider's inventory is refreshed.
 
 ### manageiq_user module
 
-**Upstream replacement:** https://docs.ansible.com/ansible/devel/manageiq_user_module.html
+**Upstream replacement:** https://docs.ansible.com/ansible/devel/module_docs/manageiq_user_module.html
 
 The `manageiq_user` module supports adding, updating and deleting users in manageiq.  
 Example playbook [create_user.yml](examples/create_user.yml) is provided.  
@@ -65,7 +65,7 @@ To update an existing user pass the changed values together with the required pa
 
 ### manageiq_policy_assignment module
 
-**Upstream replacement:** https://docs.ansible.com/ansible/devel/manageiq_policies_module.html
+**Upstream replacement:** https://docs.ansible.com/ansible/devel/module_docs/manageiq_policies_module.html
 
 The `manageiq_policy_assignment` module currently supports assigning and unassigning Policies and Policy Profiles on resources in manageiq.  
 An example playbook [assign_policy.yml](examples/assign_policy.yml) is provided.  
@@ -82,7 +82,7 @@ It is possible to add a date type custom attributes by specifying `field_type: "
 
 ### manageiq_tag_assignment module
 
-**Upstream replacement:** https://docs.ansible.com/ansible/devel/manageiq_tags_module.html
+**Upstream replacement:** https://docs.ansible.com/ansible/devel/module_docs/manageiq_tags_module.html
 
 The `manageiq_tag_assignment` module currently supports assigning and unassigning tags on resources in manageiq.  
 List of supprted entities for tag assignment can be found in the [ManageIQ REST API docs](http://manageiq.org/docs/reference/latest/api/reference/tagging)  
