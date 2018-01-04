@@ -1,6 +1,6 @@
 # OBSOLETE — Upstreaming into Ansible itself
 
-This repository is no longer maintained.
+This repository is **no longer maintained**.
 Instead, most of this functionality was upsteamed into <https://github.com/ansible/ansible>.
 If you want to contribute, please send PRs to Ansible itself (and we'll help review).
 
