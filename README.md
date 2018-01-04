@@ -1,6 +1,6 @@
 # OBSOLETE — Upstreaming into Ansible itself
 
-This repository is no longer maintained.
+This repository is **no longer maintained**.
 Instead, most of this functionality was upsteamed into <https://github.com/ansible/ansible>.
 If you want to contribute, please send PRs to Ansible itself (and we'll help review).
 
@@ -45,7 +45,7 @@ To view a module documentation execute:
 
 ### manageiq_provider module
 
-**Replacement**: upstream https://docs.ansible.com/ansible/devel/manageiq_provider_module.html
+**Upstream replacement:** https://docs.ansible.com/ansible/devel/manageiq_provider_module.html
 
 The `manageiq_provider` module currently supports adding, updating and deleting OpenShift, Amazon EC2 and Hawkular Datawarehouse providers to manageiq.  
 Example playbooks [add_openshift_provider.yml](examples/add_openshift_provider.yml), [add_amazon_provider.yml](examples/add_amazon_provider.yml) and [add_hawkular_datawarehouse_provider.yml](examples/add_hawkular_datawarehouse_provider.yml) are provided.
