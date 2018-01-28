@@ -92,7 +92,7 @@ To unassign a tag from a resource change `state=absent`.
 
 ### manageiq_alert module
 
-**Upstream replacements WIP:** https://github.com/ansible/ansible/pull/32136, https://github.com/ansible/ansible/pull/32354
+**Upstream replacements (split into 2 modules):** https://docs.ansible.com/ansible/devel/module_docs/manageiq_alerts_module.html, https://docs.ansible.com/ansible/devel/module_docs/manageiq_alert_profiles_module.html
 
 The `manageiq_alert` module supports adding, updating and deleting alerts in manageiq.  
 Example playbook [create_alert.yml](examples/create_alert.yml) is provided.  
