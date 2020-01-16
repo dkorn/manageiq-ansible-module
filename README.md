@@ -118,3 +118,9 @@ SSL verification for HTTPS requests is enabled by default.
 
 To use a self-signed certificate pass the certificate file or directory path using the ca_bundle_path option: `ca_bundle_path: '/path/to/certfile'`.
 To ignore verifying the SSL certificate pass `miq_verify_ssl: False`
+    
+
+
+## Licence
+GNU General Public License V3, same as Ansible.
+Click on the [Link](COPYING) to see the full text.
