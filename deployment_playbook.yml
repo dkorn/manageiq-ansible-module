@@ -1,0 +1,67 @@
+---
+# Environment Variables
+#   This playbook assumes that the folliowing ManageIQ parameters are defined as environment variables:
+#   miq_url (MIQ_URL), miq_username (MIQ_USERNAME), miq_password (MIQ_PASSWORD)
+
+- hosts: localhost
+
+  tasks:
+  - name: Create Operator users in ManageIQ
+    with_items: "{{ groups['users'] }}"
+    manageiq_user:
+      name: "{{ item }}"
+      state: 'present'
+      fullname: "{{ hostvars[item].full_name }}"
+      password: "{{ hostvars[item].password }}"
+      group: "{{ hostvars[item].group }}"
+      # TODO (dkorn): will probavly verify SSL
+      verify_ssl: False
+    # TODO (dkorn): remove if no debug
+    register: result
+
+  # TODO (dkorn): decide if the printing the results is needed
+  - debug: var=result
+
+  - name: Add Amazon EC2 Provider to ManageIQ
+    with_items: "{{ groups['amazon_providers'] }}"
+    manageiq_provider:
+      name: "{{ item }}"
+      state: 'present'
+      provider_type: "{{ hostvars[item].type }}"
+      provider_region: "{{ hostvars[item].region }}"
+      access_key_id: "{{ hostvars[item].access_key_id }}"
+      secret_access_key: "{{ hostvars[item].secret_access_key }}"
+      verify_ssl: False
+    register: result
+
+  - debug: var=result
+
+  - name: Add Openshift Containers Providers to ManageIQ
+    with_items: "{{ groups['openshift_providers'] }}"
+    manageiq_provider:
+      name: "{{ item }}"
+      provider_type: "{{ hostvars[item].type }}"
+      state: 'present'
+      zone: "{{ hostvars[item].zone }}"
+      provider_api_hostname: "{{ hostvars[item].hostname }}"
+      provider_api_port: "{{ hostvars[item].port }}"
+      provider_api_auth_token: "{{ hostvars[item].token }}"
+      metrics: "{{ hostvars[item].metrics }}"
+      hawkular_hostname: "{{ hostvars[item].hawkular_hostname }}"
+      hawkular_port: "{{ hostvars[item].hawkular_port }}"
+      verify_ssl: False
+    register: result
+
+  - debug: var=result
+
+  - name: Add Custom Attributes to Openshift Providers in ManageIQ
+    with_items: "{{ groups['openshift_providers'] }}"
+    manageiq_custom_attributes:
+      entity_type: "provider"
+      entity_name: "{{ item }}"
+      state: 'present'
+      custom_attributes: "{{ hostvars[item].custom_attributes }}"
+      verify_ssl: False
+    register: result
+
+  - debug: var=result
